@@ -1,0 +1,21 @@
+{
+	"name": "systemic-azure-bus",
+	"version": "0.0.1",
+	"description": "A systemic component for azure bus",
+	"main": "index.js",
+	"scripts": {},
+	"keywords": [
+		"systemic",
+		"azure",
+		"bus"
+	],
+	"license": "ISC",
+	"dependencies": {
+		"@liber/ez-pubsub": "^1.0.8746",
+		"crypto": "^1.0.1",
+		"debug": "^4.1.1",
+		"request-promise-native": "^1.0.5",
+		"utf8": "^3.0.0"
+	},
+	"devDependencies": {}
+}
