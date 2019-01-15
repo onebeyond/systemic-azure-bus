@@ -6,12 +6,12 @@ module.exports = () => {
 
 	const start = async ({ config: { subscriptions, publications }, logger }) => {
 
-		const publish = publicationId => message => {
+		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
 			debug(`Preparing connection to publish ${publicationId} on topic ${topic}...`);
 			const sender = createTopicSender({ topic });
-			return sender.send({ message: { body: JSON.stringify(message) } });
+			return message => sender.send({ message: { body: JSON.stringify(message) } });
 		};
 
 		const subscribe = (onError, onStop) => (subscriptionId, handler) => {
