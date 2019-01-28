@@ -21,6 +21,7 @@ module.exports = () => {
 				topic,
 				subscription,
 				onMessage: handler,
+				defaultAck: false,
 				onError: error => {
 					logger.error(error.message);
 					onError(error);
