@@ -63,9 +63,39 @@ module.exports = () => {
 			receiver.receive(onMessageHandler, onError, { autoComplete: false });
 		};
 
+		const peekDlq = async (subscriptionId) => {
+			const { topic, subscription } = subscriptions[subscriptionId] || {};
+			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
+			const client = connection.createQueueClient(dlqName);
+			const peekedDeadMsgs = await client.peek();
+			await client.close();
+			return peekedDeadMsgs;
+		};
+
+		const processDlq = async (subscriptionId, handler) => {
+			const { topic, subscription } = subscriptions[subscriptionId] || {};
+			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
+			const client = connection.createQueueClient(dlqName);
+			const receiver = client.getReceiver();
+
+			while (true) {
+				const messages = await receiver.receiveBatch(1);
+				if (!messages.length) {
+					console.log("No more messages to receive");
+					break;
+				}
+				await handler(messages[0]);
+			}
+			await client.close();
+		};
+
 		return {
 			publish,
 			subscribe,
+			peekDlq,
+			processDlq,
 		};
 	};
 

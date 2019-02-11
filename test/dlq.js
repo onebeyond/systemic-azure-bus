@@ -30,20 +30,19 @@ const config = {
   },
 };
 
-const payload = { foo: 'bar' };
+const generatePayload = () => ({ foo: Date.now() });
 
 const onError = logger.error;
 const onStop = console.log;
-let received = 0;
-const AMMONITION = 1;
+const AMMONITION = 10;
 
 const run = async () => {
-
-  const startTime = new Date().getTime();
+  const { peekDlq, processDlq, publish, subscribe } = await start({ config, logger });
+  const publishFire = publish('fire');
+  const safeSubscribe = subscribe(onError, onStop);
 
   const handler = async (body) => {
-    received++;
-    console.log('Received some!');
+    console.log('Received some!', body);
     const e = new Error('Throwing an error to force sending the message straight to DLQ');
     e.strategy = 'dlq';
     throw e;
@@ -52,18 +51,28 @@ const run = async () => {
   const attack = async () => {
     const shots = Array.from(Array(AMMONITION).keys());
     for (shot in shots) {
-      await publishFire(payload);
+      await publishFire(generatePayload());
     }
   };
 
-  const { publish, subscribe } = await start({ config, logger });
-  const publishFire = publish('fire');
-  const safeSubscribe = subscribe(onError, onStop);
   try {
-    safeSubscribe('assess', handler);
-    await attack();
-    const publicationTime = new Date().getTime();
-    console.log(`Everything published in ${publicationTime - startTime} milliseconds`);
+    // safeSubscribe('assess', handler);
+    // await attack();
+    let dead = [];
+    // while(dead.length < AMMONITION - 1) {
+    // }
+
+    // dead = await peekDlq('assess');
+    // console.log(dead.length)
+    // console.log('process now!')
+
+    await processDlq('assess', async (message) => {
+      // console.log(`Received message: ${message.body}`);
+      console.log(`Received message:`);
+      await message.complete();
+    });
+
+    process.exit(0);
   } catch(e) {
     console.error(e);
     // await stop();
