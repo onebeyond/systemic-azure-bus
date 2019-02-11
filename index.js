@@ -1,36 +1,66 @@
+// https://github.com/Azure/azure-sdk-for-js/blob/master/packages/%40azure/servicebus/data-plane/test/receiveAndDeleteMode.spec.ts#L416-L424
+
 const debug = require('debug')('systemic-azure-bus');
-const { creatSubscriptionListener, createTopicSender } = require('@liber/ez-pubsub');
+const { Namespace, delay } = require('@azure/service-bus');
 
 module.exports = () => {
-	const registeredSubscriptions = [];
+	const registeredClients = [];
+	const registeredReceivers = [];
+	let connection;
 
-	const start = async ({ config: { subscriptions, publications }, logger }) => {
+	const start = async ({ config: { subscriptions, publications } }) => {
+
+		connection = Namespace.createFromConnectionString(process.env.AZURE_SERVICEBUS_CONNECTION_STRING);
 
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
 			debug(`Preparing connection to publish ${publicationId} on topic ${topic}...`);
-			const sender = createTopicSender({ topic });
-			return message => sender.send({ message: { body: JSON.stringify(message) } });
+			const client = connection.createTopicClient(topic);
+			registeredClients.push(client);
+			const sender = client.getSender();
+			return async (message) => {
+				await sender.send(message);
+			};
 		};
 
-		const subscribe = (onError, onStop) => (subscriptionId, handler) => {
-			const { topic, subscription } = subscriptions[subscriptionId] || {};
+		const subscribe = (onError) => (subscriptionId, handler) => {
+			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const newSubscription = creatSubscriptionListener({
-				topic,
-				subscription,
-				onMessage: handler,
-				defaultAck: false,
-				onError: error => {
-					logger.error(error.message);
-					onError(error);
-				},
-				onStop,
-			});
-			registeredSubscriptions.push(newSubscription);
+			const client = connection.createSubscriptionClient(topic, subscription);
+			registeredClients.push(client);
+			const receiver = client.getReceiver();
+			registeredReceivers.push(receiver);
+
+			const onMessageHandler = async (brokeredMessage) => {
+				const { body, deliveryCount } = brokeredMessage;
+
+				const errorStrategies = {
+					retry: async () => {
+						debug(`Abandoning message with number of attempts ${deliveryCount}`);
+						/* Everytime you abandon a message, delivery count will be increased by 1.
+						When it reaches to max delivery count (which is 10 default), it will be sent to dead queue */
+						await brokeredMessage.abandon();
+					},
+					dlq: async () => {
+						debug('Sending message straight to DLQ');
+						await brokeredMessage.deadLetter();
+					}
+				};
+
+				try {
+					await handler(body);
+					await brokeredMessage.complete();
+				} catch(e) {
+					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
+					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
+					debug(`Handling error with strategy ${errorStrategy}`);
+					const errorHandler = errorStrategies[errorStrategy] || errorStrategies['retry'];
+					await errorHandler();
+				}
+			};
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
-			newSubscription.start();
+			receiver.receive(onMessageHandler, onError, { autoComplete: false });
 		};
 
 		return {
@@ -39,7 +69,22 @@ module.exports = () => {
 		};
 	};
 
-	const stop = async () => registeredSubscriptions.forEach(subscription => subscription.stop());
+	const stop = async () => {
+		// await delay(5000);
+
+		debug('Stopping registered clients...');
+		registeredClients.forEach(async (client) => {
+			await client.close();
+		});
+
+		// debug('Stopping registered receivers...');
+		// registeredReceivers.forEach(async (receiver) => {
+		// 	await receiver.close();
+		// });
+
+		// debug('Stopping service bus connection...');
+		// await connection.close();
+	};
 
 	return { start, stop };
 };
