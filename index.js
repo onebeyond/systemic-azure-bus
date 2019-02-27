@@ -8,9 +8,9 @@ module.exports = () => {
 	const registeredReceivers = [];
 	let connection;
 
-	const start = async ({ config: { subscriptions, publications } }) => {
+	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
 
-		connection = Namespace.createFromConnectionString(process.env.AZURE_SERVICEBUS_CONNECTION_STRING);
+		connection = Namespace.createFromConnectionString(connectionString);
 
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
@@ -19,7 +19,12 @@ module.exports = () => {
 			const client = connection.createTopicClient(topic);
 			registeredClients.push(client);
 			const sender = client.getSender();
-			return async (message) => {
+			return async (body, label = '') => {
+				const message = {
+					body,
+					contentType: 'application/json',
+					label,
+				};
 				await sender.send(message);
 			};
 		};
@@ -37,24 +42,25 @@ module.exports = () => {
 
 				const errorStrategies = {
 					retry: async () => {
-						debug(`Abandoning message with number of attempts ${deliveryCount}`);
+						debug(`Abandoning message with number of attempts ${deliveryCount} on topic ${topic}`);
 						/* Everytime you abandon a message, delivery count will be increased by 1.
 						When it reaches to max delivery count (which is 10 default), it will be sent to dead queue */
 						await brokeredMessage.abandon();
 					},
 					dlq: async () => {
-						debug('Sending message straight to DLQ');
+						debug(`Sending message straight to DLQ on topic ${topic}`);
 						await brokeredMessage.deadLetter();
 					}
 				};
 
 				try {
+					debug(`Handling message on topic ${topic}`);
 					await handler(body);
 					await brokeredMessage.complete();
 				} catch(e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
-					debug(`Handling error with strategy ${errorStrategy}`);
+					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
 					const errorHandler = errorStrategies[errorStrategy] || errorStrategies['retry'];
 					await errorHandler();
 				}
@@ -69,6 +75,7 @@ module.exports = () => {
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
 			const peekedDeadMsgs = await client.peek();
+			debug(`Peeked ${peekedDeadMsgs.length} messages from DLQ ${dlqName}`);
 			await client.close();
 			return peekedDeadMsgs;
 		};
@@ -80,12 +87,14 @@ module.exports = () => {
 			const client = connection.createQueueClient(dlqName);
 			const receiver = client.getReceiver();
 
+
 			while (true) {
 				const messages = await receiver.receiveBatch(1);
 				if (!messages.length) {
-					console.log("No more messages to receive");
+					debug(`No more messages to receive from DLQ ${dlqName}`);
 					break;
 				}
+				debug(`Processing message from DLQ ${dlqName}`);
 				await handler(messages[0]);
 			}
 			await client.close();
