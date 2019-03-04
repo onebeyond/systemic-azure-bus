@@ -29,6 +29,7 @@ const config = {
 describe('Systemic Azure Bus API', () => {
 
   let bus;
+  const enoughTime = 500;
   const onError = console.log;
   const onStop = console.log;
 
@@ -39,6 +40,11 @@ describe('Systemic Azure Bus API', () => {
     const deadBodies = await bus.peekDlq(subscriptionId);
     if (deadBodies.length === 0) return;
     await bus.processDlq(subscriptionId, accept);
+  };
+
+  const verifyDeadBody = async (subscriptionId) => {
+    const deadBodies = await bus.peekDlq(subscriptionId);
+    expect(deadBodies.length).to.equal(1);
   };
 
   beforeEach(async () => {
@@ -101,32 +107,58 @@ describe('Systemic Azure Bus API', () => {
       await attack();
     }));
 
-  it.skip('retries a message 10 times under the "retry" strategy before going to DLQ', () =>
+  it('retries a message 10 times under the "retry" strategy before going to DLQ', () =>
     new Promise(async (resolve) => {
-      const BULLETS = 1;
+      let received = 0;
       const safeSubscribe = bus.subscribe(onError, onStop);
       const publishFire = bus.publish('fire');
-      const attack = async (amount) => {
-        const shots = Array.from(Array(amount).keys());
-        for (shot in shots) {
-          await publishFire(createPayload());
-        }
+      const attack = async () => {
+        await publishFire(createPayload());
       };
 
-      let received = 0;
+      const confirmDeath = async () => {
+        await verifyDeadBody('assess');
+        resolve();
+      };
 
       const handler = async () => {
         received++;
-        console.log(received)
-        if (received < 10) throw new Error('Throwing an error to force abandoning the message');
-        const deadBodies = await bus.peekDlq('assess');
-        expect(deadBodies.length).to.equal(1);
-        resolve();
-        return true;
+        if (received === 10) {
+          schedule(confirmDeath);
+          throw new Error('Throwing the last error to end up in DLQ');
+        } else {
+          throw new Error('Throwing an error to force abandoning the message');
+        }
       };
 
       safeSubscribe('assess', handler);
-      await attack(BULLETS);
+      await attack();
+    }));
+
+  const schedule = (fn) => setTimeout(fn, enoughTime);
+
+  it('sends a message straight to DLQ', () =>
+    new Promise(async (resolve) => {
+      const safeSubscribe = bus.subscribe(onError, onStop);
+      const publishFire = bus.publish('fire');
+      const attack = async () => {
+        await publishFire(createPayload());
+      };
+
+      const confirmDeath = async () => {
+        await verifyDeadBody('assess');
+        resolve();
+      };
+
+      const handler = async () => {
+        const criticalError = new Error('Throwing an error to force going to DLQ');
+        criticalError.strategy = 'dlq';
+        schedule(confirmDeath);
+        throw criticalError;
+      };
+
+      safeSubscribe('assess', handler);
+      await attack();
     }));
 
 });

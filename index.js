@@ -40,17 +40,19 @@ module.exports = () => {
 			const onMessageHandler = async (brokeredMessage) => {
 				const { body, deliveryCount } = brokeredMessage;
 
+				const deadLetter = async () => {
+					debug(`Sending message straight to DLQ on topic ${topic}`);
+					await brokeredMessage.deadLetter();
+				};
+
+				const reject = async () => {
+					debug(`Abandoning message with number of attempts ${deliveryCount} on topic ${topic}`);
+					await brokeredMessage.abandon();
+				};
+
 				const errorStrategies = {
-					retry: async () => {
-						debug(`Abandoning message with number of attempts ${deliveryCount} on topic ${topic}`);
-						/* Everytime you abandon a message, delivery count will be increased by 1.
-						When it reaches to max delivery count (which is 10 default), it will be sent to dead queue */
-						await brokeredMessage.abandon();
-					},
-					dlq: async () => {
-						debug(`Sending message straight to DLQ on topic ${topic}`);
-						await brokeredMessage.deadLetter();
-					}
+					retry: reject,
+					dlq: deadLetter
 				};
 
 				try {
@@ -87,13 +89,9 @@ module.exports = () => {
 			const client = connection.createQueueClient(dlqName);
 			const receiver = client.getReceiver();
 
-
-			while (true) {
+			const deadMsgs = await peekDlq(subscriptionId);
+			for (const item of deadMsgs) {
 				const messages = await receiver.receiveBatch(1);
-				if (!messages.length) {
-					debug(`No more messages to receive from DLQ ${dlqName}`);
-					break;
-				}
 				debug(`Processing message from DLQ ${dlqName}`);
 				await handler(messages[0]);
 			}
