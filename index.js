@@ -10,7 +10,7 @@ module.exports = () => {
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
 
-		const newErrorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
+		const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 
 		connection = Namespace.createFromConnectionString(connectionString);
 		topicClientFactory = initTopicClientFactory(connection);
@@ -40,10 +40,10 @@ module.exports = () => {
 
 			const onMessageHandler = async (brokeredMessage) => {
 
-				const errorStrategies = {
-					retry: newErrorStrategies.retry(topic),
-					deadLetter: newErrorStrategies.deadLetter(topic),
-					exponentialBackoff: newErrorStrategies.exponentialBackoff(topic, topicClientFactory),
+				const topicErrorStrategies = {
+					retry: errorStrategies.retry(topic),
+					deadLetter: errorStrategies.deadLetter(topic),
+					exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory),
 				};
 
 				try {
@@ -54,7 +54,7 @@ module.exports = () => {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
 					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
-					const errorHandler = errorStrategies[errorStrategy] || errorStrategies['retry'];
+					const errorHandler = topicErrorStrategies[errorStrategy] || topicErrorStrategies['retry'];
 					await errorHandler(brokeredMessage, errorHandling || {});
 				}
 			};
