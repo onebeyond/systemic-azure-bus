@@ -2,25 +2,23 @@ const debug = require('debug')('systemic-azure-bus');
 const { join } = require('path');
 const requireAll = require('require-all');
 const { Namespace, delay } = require('@azure/service-bus');
+const initTopicClientFactory = require('./lib/topicClientFactory');
 
 module.exports = () => {
-	const registeredClients = [];
-	const registeredReceivers = [];
 	let connection;
+	let topicClientFactory;
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
 
 		const newErrorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 
 		connection = Namespace.createFromConnectionString(connectionString);
+		topicClientFactory = initTopicClientFactory(connection);
 
 		const publish = publicationId => {
 			const { topic, contentType = 'application/json' } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
-			debug(`Preparing connection to publish ${publicationId} on topic ${topic}...`);
-			const client = connection.createTopicClient(topic);
-			registeredClients.push(client);
-			const sender = client.getSender();
+			const sender = topicClientFactory.createSender(topic);
 			return async (body, label = '', userProperties) => {
 				const message = {
 					body,
@@ -38,17 +36,14 @@ module.exports = () => {
 		const subscribe = (onError) => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const client = connection.createSubscriptionClient(topic, subscription);
-			registeredClients.push(client);
-			const receiver = client.getReceiver();
-			registeredReceivers.push(receiver);
+			const receiver = topicClientFactory.createReceiver(topic, subscription);
 
 			const onMessageHandler = async (brokeredMessage) => {
 
 				const errorStrategies = {
 					retry: newErrorStrategies.retry(topic),
 					deadLetter: newErrorStrategies.deadLetter(topic),
-					exponentialBackoff: newErrorStrategies.exponentialBackoff(topic, connection),
+					exponentialBackoff: newErrorStrategies.exponentialBackoff(topic, topicClientFactory),
 				};
 
 				try {
@@ -105,10 +100,7 @@ module.exports = () => {
 	const stop = async () => {
 		// await delay(5000);
 
-		debug('Stopping registered clients...');
-		registeredClients.forEach(async (client) => {
-			await client.close();
-		});
+		await topicClientFactory.stop();
 
 		// debug('Stopping registered receivers...');
 		// registeredReceivers.forEach(async (receiver) => {
