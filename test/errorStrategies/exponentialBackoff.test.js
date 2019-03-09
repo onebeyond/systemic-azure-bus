@@ -1,12 +1,8 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const initBus = require('../..');
-
-const { start, stop } = initBus();
+const { bus, createPayload, schedule } = require('../helper');
 
 const stressTopic = 'stress.test';
-const enoughTime = 500;
-const schedule = (fn) => setTimeout(fn, enoughTime);
 
 const config = {
   connection: {
@@ -33,48 +29,32 @@ const config = {
   }
 };
 
-describe('Exponential Backoff error strategy', () => {
+describe.only('Exponential Backoff error strategy', () => {
 
-  let bus;
-  const onError = console.log;
-  const onStop = console.log;
-
-  const createPayload = () => ({ foo: Date.now() });
-
-  const purgeDlqBySubcriptionId = async (subscriptionId) => {
-    const accept = async (message) => await message.complete();
-    const deadBodies = await bus.peekDlq(subscriptionId);
-    if (deadBodies.length === 0) return;
-    await bus.processDlq(subscriptionId, accept);
-  };
-
-  const verifyDeadBody = async (subscriptionId) => {
-    const deadBodies = await bus.peekDlq(subscriptionId);
-    expect(deadBodies.length).to.equal(1);
-  };
+  let busApi;
 
   beforeEach(async () => {
-    bus = await start({ config });
-    await purgeDlqBySubcriptionId('assessExponentialBackoff');
+    busApi = await bus.start({ config });
+    await busApi.purgeDlqBySubcriptionId('assessExponentialBackoff');
   });
 
   afterEach(async () => {
-    await purgeDlqBySubcriptionId('assessExponentialBackoff');
-    await stop();
+    await busApi.purgeDlqBySubcriptionId('assessExponentialBackoff');
+    await bus.stop();
   });
 
   it('retries a message 4 times with exponential backoff before going to DLQ', () =>
     new Promise(async (resolve) => {
       const testedSubscription = 'assessExponentialBackoff';
       let received = 0;
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
+      const publishFire = busApi.publish('fire');
       const attack = async () => {
         await publishFire(createPayload());
       };
 
       const confirmDeath = async () => {
-        await verifyDeadBody(testedSubscription);
+        const deadBodies = await busApi.checkDeadBodies(testedSubscription);
+        expect(deadBodies.length).to.equal(1);
         resolve();
       };
 
@@ -92,7 +72,7 @@ describe('Exponential Backoff error strategy', () => {
         }
       };
 
-      safeSubscribe(testedSubscription, handler);
+      busApi.safeSubscribe(testedSubscription, handler);
       await attack();
     }));
 
