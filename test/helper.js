@@ -27,6 +27,7 @@ const start = async ({ config }) => {
   return {
     safeSubscribe: bus.subscribe(console.error, console.log),
     publish: bus.publish,
+    peekDlq: bus.peekDlq,
     purgeDlqBySubcriptionId,
     checkDeadBodies,
   };

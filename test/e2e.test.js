@@ -1,8 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const initBus = require('..');
-
-const { start, stop } = initBus();
+const { bus, createPayload } = require('./helper');
 
 const stressTopic = 'stress.test';
 
@@ -27,36 +25,24 @@ const config = {
   }
 };
 
-describe('Systemic Azure Bus API', () => {
+describe.only('Systemic Azure Bus API', () => {
 
-  let bus;
-  const onError = console.log;
-  const onStop = console.log;
-
-  const createPayload = () => ({ foo: Date.now() });
-
-  const purgeDlqBySubcriptionId = async (subscriptionId) => {
-    const accept = async (message) => await message.complete();
-    const deadBodies = await bus.peekDlq(subscriptionId);
-    if (deadBodies.length === 0) return;
-    await bus.processDlq(subscriptionId, accept);
-  };
+  let busApi;
 
   beforeEach(async () => {
-    bus = await start({ config });
-    await purgeDlqBySubcriptionId('assess');
-  })
+    busApi = await bus.start({ config });
+    await busApi.purgeDlqBySubcriptionId('assess');
+  });
 
   afterEach(async () => {
-    await purgeDlqBySubcriptionId('assess');
-    await stop();
-  })
+    await busApi.purgeDlqBySubcriptionId('assess');
+    await bus.stop();
+  });
 
   it('publishes lots of messages and receives them all', () =>
     new Promise(async (resolve) => {
       const BULLETS = 20;
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
+      const publishFire = busApi.publish('fire');
       const attack = async (amount) => {
         const shots = Array.from(Array(amount).keys());
         for (shot in shots) {
@@ -69,13 +55,13 @@ describe('Systemic Azure Bus API', () => {
       const handler = async () => {
         received++;
         if (received === BULLETS) {
-          const deadBodies = await bus.peekDlq('assess');
+          const deadBodies = await busApi.peekDlq('assess');
           expect(deadBodies.length).to.equal(0);
           resolve();
         };
       };
 
-      safeSubscribe('assess', handler);
+      busApi.safeSubscribe('assess', handler);
       await attack(BULLETS);
     }));
 });

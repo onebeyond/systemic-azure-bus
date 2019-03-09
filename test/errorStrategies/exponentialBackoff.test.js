@@ -29,7 +29,7 @@ const config = {
   }
 };
 
-describe.only('Exponential Backoff error strategy', () => {
+describe('Exponential Backoff error strategy', () => {
 
   let busApi;
 
