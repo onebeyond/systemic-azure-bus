@@ -47,11 +47,6 @@ module.exports = () => {
 			const onMessageHandler = async (brokeredMessage) => {
 				const { body, deliveryCount, userProperties } = brokeredMessage;
 
-				const deadLetter = async () => {
-					debug(`Sending message straight to DLQ on topic ${topic}`);
-					await brokeredMessage.deadLetter();
-				};
-
 				const schedule = async (message, scheduledTimeInMillisecs) => {
 					const client = connection.createTopicClient(topic);
 					registeredClients.push(client);
@@ -68,7 +63,7 @@ module.exports = () => {
 					const attempt = userProperties.attemptCount || deliveryCount;
 					if ((attempt + 1) === attemptsLimit) {
 						debug(`Maximum number of deliveries (${attemptsLimit}) reached on topic ${topic}. Sending to dlq...`);
-						await deadLetter();
+						await newErrorStrategies.deadLetter(topic)(brokeredMessage);
 					} else {
 						const nextAttempt = Math.pow(BACKOFF_FACTOR, attempt);
 						const scheduledTime = moment().add(nextAttempt, measure).toDate().getTime();
@@ -86,7 +81,7 @@ module.exports = () => {
 
 				const errorStrategies = {
 					retry: newErrorStrategies.retry(topic),
-					deadLetter,
+					deadLetter: newErrorStrategies.deadLetter(topic),
 					exponentialBackoff,
 				};
 
