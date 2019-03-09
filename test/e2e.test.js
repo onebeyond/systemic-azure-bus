@@ -131,28 +131,4 @@ describe('Systemic Azure Bus API', () => {
 
   const schedule = (fn) => setTimeout(fn, enoughTime);
 
-  it('sends a message straight to DLQ', () =>
-    new Promise(async (resolve) => {
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
-      const attack = async () => {
-        await publishFire(createPayload());
-      };
-
-      const confirmDeath = async () => {
-        await verifyDeadBody('assess');
-        resolve();
-      };
-
-      const handler = async () => {
-        const criticalError = new Error('Throwing an error to force going to DLQ');
-        criticalError.strategy = 'deadLetter';
-        schedule(confirmDeath);
-        throw criticalError;
-      };
-
-      safeSubscribe('assess', handler);
-      await attack();
-    }));
-
 });
