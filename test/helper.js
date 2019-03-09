@@ -16,11 +16,6 @@ const purgeDlqBySubcriptionId = async (subscriptionId) => {
   await bus.processDlq(subscriptionId, accept);
 };
 
-const checkDeadBodies = async (subscriptionId) => {
-  const deadBodies = await bus.peekDlq(subscriptionId);
-  return deadBodies;
-};
-
 const start = async ({ config }) => {
   debug('Initialising service bus API...');
   bus = await busApi.start({ config });
