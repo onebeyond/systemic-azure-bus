@@ -33,6 +33,7 @@ const config = {
   publications: {
     fire: {
       topic: stressTopic,
+      contentType: 'application/json'
     }
   }
 };

@@ -1,4 +1,3 @@
-// https://github.com/Azure/azure-sdk-for-js/blob/master/packages/%40azure/servicebus/data-plane/test/receiveAndDeleteMode.spec.ts#L416-L424
 const moment = require('moment');
 const debug = require('debug')('systemic-azure-bus');
 const { Namespace, delay } = require('@azure/service-bus');
@@ -13,7 +12,7 @@ module.exports = () => {
 		connection = Namespace.createFromConnectionString(connectionString);
 
 		const publish = publicationId => {
-			const { topic } = publications[publicationId] || {};
+			const { topic, contentType = 'application/json' } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
 			debug(`Preparing connection to publish ${publicationId} on topic ${topic}...`);
 			const client = connection.createTopicClient(topic);
@@ -22,7 +21,7 @@ module.exports = () => {
 			return async (body, label = '', userProperties) => {
 				const message = {
 					body,
-					contentType: 'application/json', // TODO TAKE IT FROM CONFIG
+					contentType,
 					label,
 					userProperties: {
 						...userProperties,
