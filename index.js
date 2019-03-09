@@ -1,7 +1,7 @@
 const debug = require('debug')('systemic-azure-bus');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { Namespace, delay } = require('@azure/service-bus');
+const { Namespace } = require('@azure/service-bus');
 const initTopicClientFactory = require('./lib/topicClientFactory');
 
 module.exports = () => {
@@ -98,17 +98,9 @@ module.exports = () => {
 	};
 
 	const stop = async () => {
-		// await delay(5000);
-
 		await topicClientFactory.stop();
-
-		// debug('Stopping registered receivers...');
-		// registeredReceivers.forEach(async (receiver) => {
-		// 	await receiver.close();
-		// });
-
-		// debug('Stopping service bus connection...');
-		// await connection.close();
+		debug('Stopping service bus connection...');
+		await connection.close();
 	};
 
 	return { start, stop };
