@@ -96,57 +96,6 @@ describe('Systemic Azure Bus API', () => {
       await attack(BULLETS);
     }));
 
-  it('retries a message and recovers it under the "retry" strategy not going to DLQ', () =>
-    new Promise(async (resolve) => {
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
-      const attack = async () => {
-        await publishFire(createPayload());
-      };
-
-      let received = 0;
-
-      const handler = async () => {
-        received++;
-        if (received < 2) throw new Error('Throwing an error to force abandoning the message');
-        expect(received).to.equal(3);
-        const deadBodies = await bus.peekDlq('assess');
-        expect(deadBodies.length).to.equal(0);
-        resolve();
-      };
-
-      safeSubscribe('assess', handler);
-      await attack();
-    }));
-
-  it('retries a message 10 times under the "retry" strategy before going to DLQ', () =>
-    new Promise(async (resolve) => {
-      let received = 0;
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
-      const attack = async () => {
-        await publishFire(createPayload());
-      };
-
-      const confirmDeath = async () => {
-        await verifyDeadBody('assess');
-        resolve();
-      };
-
-      const handler = async () => {
-        received++;
-        if (received === 10) {
-          schedule(confirmDeath);
-          throw new Error('Throwing the last error to end up in DLQ');
-        } else {
-          throw new Error('Throwing an error to force abandoning the message');
-        }
-      };
-
-      safeSubscribe('assess', handler);
-      await attack();
-    }));
-
   it('retries a message 4 times with exponential backoff before going to DLQ', () =>
     new Promise(async (resolve) => {
       const testedSubscription = 'assessExponentialBackoff';
