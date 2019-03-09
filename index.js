@@ -1,5 +1,7 @@
 const moment = require('moment');
 const debug = require('debug')('systemic-azure-bus');
+const { join } = require('path');
+const requireAll = require('require-all');
 const { Namespace, delay } = require('@azure/service-bus');
 
 module.exports = () => {
@@ -8,6 +10,8 @@ module.exports = () => {
 	let connection;
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
+
+		const newErrorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 
 		connection = Namespace.createFromConnectionString(connectionString);
 
@@ -48,11 +52,6 @@ module.exports = () => {
 					await brokeredMessage.deadLetter();
 				};
 
-				const retry = async () => {
-					debug(`Retrying message with number of attempts ${deliveryCount + 1} on topic ${topic}`);
-					await brokeredMessage.abandon();
-				};
-
 				const schedule = async (message, scheduledTimeInMillisecs) => {
 					const client = connection.createTopicClient(topic);
 					registeredClients.push(client);
@@ -62,7 +61,7 @@ module.exports = () => {
 
 				const MAX_ATTEMPTS = 10;
 				const BACKOFF_FACTOR = 2;
-				const exponentialBackoff = async ({ options = { measure: 'minutes', attempts: MAX_ATTEMPTS } }) => {
+				const exponentialBackoff = async (msg, { options = { measure: 'minutes', attempts: MAX_ATTEMPTS } }) => {
 					// https://markheath.net/post/defer-processing-azure-service-bus-message
 					const attemptsLimit = (options.attempts > 0 && options.attempts <= 10) ? options.attempts : MAX_ATTEMPTS;
 					const { measure } = options;
@@ -86,7 +85,7 @@ module.exports = () => {
 				};
 
 				const errorStrategies = {
-					retry,
+					retry: newErrorStrategies.retry(topic),
 					deadLetter,
 					exponentialBackoff,
 				};
@@ -100,7 +99,7 @@ module.exports = () => {
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
 					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
 					const errorHandler = errorStrategies[errorStrategy] || errorStrategies['retry'];
-					await errorHandler(errorHandling || {});
+					await errorHandler(brokeredMessage, errorHandling || {});
 				}
 			};
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
