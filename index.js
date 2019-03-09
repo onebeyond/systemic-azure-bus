@@ -1,5 +1,5 @@
 // https://github.com/Azure/azure-sdk-for-js/blob/master/packages/%40azure/servicebus/data-plane/test/receiveAndDeleteMode.spec.ts#L416-L424
-
+const moment = require('moment');
 const debug = require('debug')('systemic-azure-bus');
 const { Namespace, delay } = require('@azure/service-bus');
 
@@ -19,11 +19,15 @@ module.exports = () => {
 			const client = connection.createTopicClient(topic);
 			registeredClients.push(client);
 			const sender = client.getSender();
-			return async (body, label = '') => {
+			return async (body, label = '', userProperties) => {
 				const message = {
 					body,
-					contentType: 'application/json',
+					contentType: 'application/json', // TODO TAKE IT FROM CONFIG
 					label,
+					userProperties: {
+						...userProperties,
+						attemptCount: 0
+					},
 				};
 				await sender.send(message);
 			};
@@ -38,33 +42,66 @@ module.exports = () => {
 			registeredReceivers.push(receiver);
 
 			const onMessageHandler = async (brokeredMessage) => {
-				const { body, deliveryCount } = brokeredMessage;
+				const { body, deliveryCount, userProperties } = brokeredMessage;
 
 				const deadLetter = async () => {
 					debug(`Sending message straight to DLQ on topic ${topic}`);
 					await brokeredMessage.deadLetter();
 				};
 
-				const reject = async () => {
-					debug(`Abandoning message with number of attempts ${deliveryCount} on topic ${topic}`);
+				const retry = async () => {
+					debug(`Retrying message with number of attempts ${deliveryCount + 1} on topic ${topic}`);
 					await brokeredMessage.abandon();
 				};
 
+				const schedule = async (message, scheduledTimeInMillisecs) => {
+					const client = connection.createTopicClient(topic);
+					registeredClients.push(client);
+					const sender = client.getSender();
+  				await sender.scheduleMessages(new Date(scheduledTimeInMillisecs), [message]);
+				};
+
+				const MAX_ATTEMPTS = 10;
+				const BACKOFF_FACTOR = 2;
+				const exponentialBackoff = async ({ options = { measure: 'minutes', attempts: MAX_ATTEMPTS } }) => {
+					// https://markheath.net/post/defer-processing-azure-service-bus-message
+					const attemptsLimit = (options.attempts > 0 && options.attempts <= 10) ? options.attempts : MAX_ATTEMPTS;
+					const { measure } = options;
+					const attempt = userProperties.attemptCount || deliveryCount;
+					if ((attempt + 1) === attemptsLimit) {
+						debug(`Maximum number of deliveries (${attemptsLimit}) reached on topic ${topic}. Sending to dlq...`);
+						await deadLetter();
+					} else {
+						const nextAttempt = Math.pow(BACKOFF_FACTOR, attempt);
+						const scheduledTime = moment().add(nextAttempt, measure).toDate().getTime();
+						debug(`Retrying message exponentially with number of attempts ${attempt} on topic ${topic}. Scheduling for ${nextAttempt} ${measure}...`);
+						const clone = brokeredMessage.clone();
+						clone.userProperties = {
+							attemptCount: attempt + 1,
+						};
+						await Promise.all([
+							schedule(clone, scheduledTime),
+							brokeredMessage.complete(),
+						]);
+					}
+				};
+
 				const errorStrategies = {
-					retry: reject,
-					dlq: deadLetter
+					retry,
+					deadLetter,
+					exponentialBackoff,
 				};
 
 				try {
 					debug(`Handling message on topic ${topic}`);
-					await handler(body);
+					await handler({ body, userProperties });
 					await brokeredMessage.complete();
 				} catch(e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
 					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
 					const errorHandler = errorStrategies[errorStrategy] || errorStrategies['retry'];
-					await errorHandler();
+					await errorHandler(errorHandling || {});
 				}
 			};
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
