@@ -53,7 +53,7 @@ describe('Exponential Backoff error strategy', () => {
       };
 
       const confirmDeath = async () => {
-        const deadBodies = await busApi.checkDeadBodies(testedSubscription);
+        const deadBodies = await busApi.peekDlq('assessExponentialBackoff');
         expect(deadBodies.length).to.equal(1);
         resolve();
       };

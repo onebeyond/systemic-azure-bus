@@ -25,7 +25,7 @@ const config = {
   }
 };
 
-describe.only('Systemic Azure Bus API', () => {
+describe('Systemic Azure Bus API', () => {
 
   let busApi;
 
