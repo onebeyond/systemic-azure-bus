@@ -1,12 +1,8 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const initBus = require('../..');
-
-const { start, stop } = initBus();
+const { bus, createPayload, schedule } = require('../helper');
 
 const stressTopic = 'stress.test';
-const enoughTime = 500;
-const schedule = (fn) => setTimeout(fn, enoughTime);
 
 const config = {
   connection: {
@@ -31,68 +27,44 @@ const config = {
 
 describe('Retry error strategy', () => {
 
-  let bus;
-  const onError = console.log;
-  const onStop = console.log;
-
-  const createPayload = () => ({ foo: Date.now() });
-
-  const purgeDlqBySubcriptionId = async (subscriptionId) => {
-    const accept = async (message) => await message.complete();
-    const deadBodies = await bus.peekDlq(subscriptionId);
-    if (deadBodies.length === 0) return;
-    await bus.processDlq(subscriptionId, accept);
-  };
-
-  const verifyDeadBody = async (subscriptionId) => {
-    const deadBodies = await bus.peekDlq(subscriptionId);
-    expect(deadBodies.length).to.equal(1);
-  };
+  let busApi;
 
   beforeEach(async () => {
-    bus = await start({ config });
-    await purgeDlqBySubcriptionId('assessWithRetry');
+    busApi = await bus.start({ config });
+    await busApi.purgeDlqBySubcriptionId('assessWithRetry');
   });
 
   afterEach(async () => {
-    await purgeDlqBySubcriptionId('assessWithRetry');
-    await stop();
+    await busApi.purgeDlqBySubcriptionId('assessWithRetry');
+    await bus.stop();
   });
 
   it('retries a message and recovers it under the "retry" strategy not going to DLQ', () =>
     new Promise(async (resolve) => {
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
-      const attack = async () => {
-        await publishFire(createPayload());
-      };
-
+      const publishFire = busApi.publish('fire');
       let received = 0;
 
       const handler = async () => {
         received++;
         if (received < 2) throw new Error('Throwing an error to force abandoning the message');
         expect(received).to.equal(3);
-        const deadBodies = await bus.peekDlq('assessWithRetry');
+        const deadBodies = await busApi.peekDlq('assessWithRetry');
         expect(deadBodies.length).to.equal(0);
         resolve();
       };
 
-      safeSubscribe('assessWithRetry', handler);
-      await attack();
+      busApi.safeSubscribe('assessWithRetry', handler);
+      await publishFire(createPayload());
     }));
 
   it('retries a message 10 times under the "retry" strategy before going to DLQ', () =>
     new Promise(async (resolve) => {
       let received = 0;
-      const safeSubscribe = bus.subscribe(onError, onStop);
-      const publishFire = bus.publish('fire');
-      const attack = async () => {
-        await publishFire(createPayload());
-      };
+      const publishFire = busApi.publish('fire');
 
       const confirmDeath = async () => {
-        await verifyDeadBody('assessWithRetry');
+        const deadBodies = await busApi.peekDlq('assessWithRetry');
+        expect(deadBodies.length).to.equal(1);
         resolve();
       };
 
@@ -106,8 +78,8 @@ describe('Retry error strategy', () => {
         }
       };
 
-      safeSubscribe('assessWithRetry', handler);
-      await attack();
+      busApi.safeSubscribe('assessWithRetry', handler);
+      await publishFire(createPayload());
     }));
 
 });
