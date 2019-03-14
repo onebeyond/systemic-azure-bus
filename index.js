@@ -9,7 +9,6 @@ module.exports = () => {
 	let topicClientFactory;
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
-
 		const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 
 		connection = Namespace.createFromConnectionString(connectionString);
@@ -26,20 +25,19 @@ module.exports = () => {
 					label,
 					userProperties: {
 						...userProperties,
-						attemptCount: 0
+						attemptCount: 0,
 					},
 				};
 				await sender.send(message);
 			};
 		};
 
-		const subscribe = (onError) => (subscriptionId, handler) => {
+		const subscribe = onError => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const receiver = topicClientFactory.createReceiver(topic, subscription);
 
-			const onMessageHandler = async (brokeredMessage) => {
-
+			const onMessageHandler = async brokeredMessage => {
 				const topicErrorStrategies = {
 					retry: errorStrategies.retry(topic),
 					deadLetter: errorStrategies.deadLetter(topic),
@@ -50,11 +48,11 @@ module.exports = () => {
 					debug(`Handling message on topic ${topic}`);
 					await handler({ body: brokeredMessage.body, userProperties: brokeredMessage.userProperties });
 					await brokeredMessage.complete();
-				} catch(e) {
+				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
 					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
-					const errorHandler = topicErrorStrategies[errorStrategy] || topicErrorStrategies['retry'];
+					const errorHandler = topicErrorStrategies[errorStrategy] || topicErrorStrategies.retry;
 					await errorHandler(brokeredMessage, errorHandling || {});
 				}
 			};
@@ -62,7 +60,7 @@ module.exports = () => {
 			receiver.receive(onMessageHandler, onError, { autoComplete: false });
 		};
 
-		const peekDlq = async (subscriptionId) => {
+		const peekDlq = async subscriptionId => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
@@ -81,10 +79,10 @@ module.exports = () => {
 			const receiver = client.getReceiver();
 
 			const deadMsgs = await peekDlq(subscriptionId);
-			for (const item of deadMsgs) {
-				const messages = await receiver.receiveBatch(1);
+			for (const item of deadMsgs) { // eslint-disable-line no-unused-vars,no-restricted-syntax
+				const messages = await receiver.receiveBatch(1); // eslint-disable-line no-await-in-loop
 				debug(`Processing message from DLQ ${dlqName}`);
-				await handler(messages[0]);
+				await handler(messages[0]); // eslint-disable-line no-await-in-loop
 			}
 			await client.close();
 		};
