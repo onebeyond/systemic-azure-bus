@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload } = require('./helper');
+const { bus, createPayload } = require('../helper');
 
 const stressTopic = 'stress.test';
 
@@ -25,7 +25,7 @@ const config = {
 	},
 };
 
-describe('Systemic Azure Bus API', () => {
+describe('Topics - Systemic Azure Bus API', () => {
 	let busApi;
 
 	beforeEach(async () => {

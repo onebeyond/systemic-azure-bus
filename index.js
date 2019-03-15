@@ -4,32 +4,22 @@ const requireAll = require('require-all');
 const { Namespace } = require('@azure/service-bus');
 const initTopicClientFactory = require('./lib/topicClientFactory');
 
+const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
+const topicApi = requireAll(join(__dirname, 'lib', 'operations', 'topics'));
+
 module.exports = () => {
 	let connection;
 	let topicClientFactory;
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
-		const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
-
 		connection = Namespace.createFromConnectionString(connectionString);
 		topicClientFactory = initTopicClientFactory(connection);
 
 		const publish = publicationId => {
-			const { topic, contentType = 'application/json' } = publications[publicationId] || {};
+			const { topic } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
 			const sender = topicClientFactory.createSender(topic);
-			return async (body, label = '', userProperties) => {
-				const message = {
-					body,
-					contentType,
-					label,
-					userProperties: {
-						...userProperties,
-						attemptCount: 0,
-					},
-				};
-				await sender.send(message);
-			};
+			return topicApi.publish(sender);
 		};
 
 		const subscribe = onError => (subscriptionId, handler) => {

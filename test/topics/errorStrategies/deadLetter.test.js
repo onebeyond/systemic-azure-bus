@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload, schedule } = require('../helper');
+const { bus, createPayload, schedule } = require('../../helper');
 
 const stressTopic = 'stress.test';
 
@@ -25,7 +25,7 @@ const config = {
 	},
 };
 
-describe('Dead Letter error strategy', () => {
+describe('Topics - Dead Letter error strategy', () => {
 	let busApi;
 
 	beforeEach(async () => {

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload, schedule } = require('../helper');
+const { bus, createPayload, schedule } = require('../../helper');
 
 const stressTopic = 'stress.test';
 
@@ -29,7 +29,7 @@ const config = {
 	},
 };
 
-describe('Exponential Backoff error strategy', () => {
+describe('Topics - Exponential Backoff error strategy', () => {
 	let busApi;
 
 	beforeEach(async () => {
