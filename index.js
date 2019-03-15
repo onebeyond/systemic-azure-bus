@@ -2,9 +2,9 @@ const debug = require('debug')('systemic-azure-bus');
 const { join } = require('path');
 const requireAll = require('require-all');
 const { Namespace } = require('@azure/service-bus');
-const initTopicClientFactory = require('./lib/topicClientFactory');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
+const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
 const topicApi = requireAll(join(__dirname, 'lib', 'operations', 'topics'));
 
 module.exports = () => {
@@ -13,7 +13,7 @@ module.exports = () => {
 
 	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
 		connection = Namespace.createFromConnectionString(connectionString);
-		topicClientFactory = initTopicClientFactory(connection);
+		topicClientFactory = factories.topics(connection);
 
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
