@@ -1,6 +1,6 @@
 {
-	"name": "@liber/systemic-azure-bus",
-	"version": "0.1.0",
+	"name": "systemic-azure-bus",
+	"version": "0.0.1",
 	"description": "A systemic component for azure bus",
 	"main": "index.js",
 	"scripts": {
