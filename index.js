@@ -56,7 +56,7 @@ module.exports = () => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
-			const client = await connection.createQueueClient(dlqName);
+			const client = connection.createQueueClient(dlqName);
 			const peekedMessage = await client.peek();
 			debug(`Peeked message from DLQ ${dlqName}`);
 			await client.close();

@@ -17,7 +17,7 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 	};
 	const deadBodies = await bus.peekDlq(subscriptionId);
 	if (deadBodies.length === 0) return;
-	await bus.processDlq(subscriptionId, accept);
+	await bus.processDlq(console.error)(subscriptionId, accept);
 };
 
 const start = async ({ config }) => {
