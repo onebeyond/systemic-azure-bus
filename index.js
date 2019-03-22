@@ -12,7 +12,13 @@ module.exports = () => {
 	let topicClientFactory;
 	let queueClientFactory;
 
-	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
+	const start = async ({
+		config: {
+			connection: { connectionString },
+			subscriptions,
+			publications,
+		},
+	}) => {
 		connection = Namespace.createFromConnectionString(connectionString);
 		topicClientFactory = factories.topics(connection);
 		queueClientFactory = factories.queue(connection);
@@ -63,12 +69,16 @@ module.exports = () => {
 			return peekedMessage;
 		};
 
-		const processDlq = onError => async (subscriptionId, handler) => {
+		const processDlq = async (subscriptionId, handler) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
 			const receiver = queueClientFactory.createReceiver(dlqName);
-			receiver.receive(handler, onError, { autoComplete: false });
+			while ((messages = await receiver.receiveBatch(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+				debug('Processing message from DLQ');
+				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
+			}
+			receiver.close();
 		};
 
 		return {

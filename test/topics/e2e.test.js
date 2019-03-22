@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload } = require('../helper');
+const { bus, createPayload, schedule } = require('../helper');
 
 const stressTopic = 'stress.test';
 
@@ -61,5 +61,38 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 		busApi.safeSubscribe('assess', handler);
 		await attack(BULLETS);
+	}));
+
+	it('publishes lots of messages, sends them to DLQ and receives them all in DLQ', () => new Promise(async resolve => {
+		const BULLETS = 10;
+		const publishFire = busApi.publish('fire');
+		const attack = async amount => {
+			const shots = Array.from(Array(amount).keys());
+			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
+				await publishFire(createPayload()); // eslint-disable-line no-await-in-loop
+			}
+		};
+
+
+		const purgeDlqBySubcriptionId = async () => {
+			let receivedMessagesInDLQ = 0;
+			const accept = async message => {
+				receivedMessagesInDLQ++;
+				if (receivedMessagesInDLQ === BULLETS) resolve();
+				message.complete();
+				return Promise.resolve();
+			};
+			await busApi.processDlq('assess', accept);
+		};
+
+		const handler = async () => {
+			const criticalError = new Error('Throwing an error to force going to DLQ');
+			criticalError.strategy = 'deadLetter';
+			throw criticalError;
+		};
+
+		busApi.safeSubscribe('assess', handler);
+		await attack(BULLETS);
+		schedule(purgeDlqBySubcriptionId);
 	}));
 });
