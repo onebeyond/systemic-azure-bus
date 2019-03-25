@@ -28,6 +28,7 @@ const start = async ({ config }) => {
 		publish: bus.publish,
 		peekDlq: bus.peekDlq,
 		purgeDlqBySubcriptionId,
+		processDlq: bus.processDlq,
 	};
 };
 

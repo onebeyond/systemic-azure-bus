@@ -10,10 +10,18 @@ const topicApi = requireAll(join(__dirname, 'lib', 'operations', 'topics'));
 module.exports = () => {
 	let connection;
 	let topicClientFactory;
+	let queueClientFactory;
 
-	const start = async ({ config: { connection: { connectionString }, subscriptions, publications } }) => {
+	const start = async ({
+		config: {
+			connection: { connectionString },
+			subscriptions,
+			publications,
+		},
+	}) => {
 		connection = Namespace.createFromConnectionString(connectionString);
 		topicClientFactory = factories.topics(connection);
+		queueClientFactory = factories.queue(connection);
 
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
@@ -55,26 +63,22 @@ module.exports = () => {
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
-			const peekedDeadMsgs = await client.peek();
-			debug(`Peeked ${peekedDeadMsgs.length} messages from DLQ ${dlqName}`);
+			const peekedMessage = await client.peek();
+			debug(`Peeked message from DLQ ${dlqName}`);
 			await client.close();
-			return peekedDeadMsgs;
+			return peekedMessage;
 		};
 
 		const processDlq = async (subscriptionId, handler) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
-			const client = connection.createQueueClient(dlqName);
-			const receiver = client.getReceiver();
-
-			const deadMsgs = await peekDlq(subscriptionId);
-			for (const item of deadMsgs) { // eslint-disable-line no-unused-vars,no-restricted-syntax
-				const messages = await receiver.receiveBatch(1); // eslint-disable-line no-await-in-loop
-				debug(`Processing message from DLQ ${dlqName}`);
-				await handler(messages[0]); // eslint-disable-line no-await-in-loop
+			const receiver = queueClientFactory.createReceiver(dlqName);
+			while ((messages = await receiver.receiveBatch(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+				debug('Processing message from DLQ');
+				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
 			}
-			await client.close();
+			receiver.close();
 		};
 
 		return {
@@ -87,6 +91,7 @@ module.exports = () => {
 
 	const stop = async () => {
 		await topicClientFactory.stop();
+		await queueClientFactory.stop();
 		debug('Stopping service bus connection...');
 		await connection.close();
 	};
