@@ -7,9 +7,11 @@ const createSender = (maxAttempts = 2) => {
 	let attempts = 0;
 
 	const send = async () => {
-		if (attempts < (maxAttempts - 1)) attempts++;
-		else return Promise.resolve();
-		throw new Error();
+		if (attempts < (maxAttempts - 1)) {
+			attempts++;
+			throw new Error();
+		}
+		return Promise.resolve();
 	};
 
 	return {
