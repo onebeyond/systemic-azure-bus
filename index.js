@@ -1,7 +1,7 @@
 const debug = require('debug')('systemic-azure-bus');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { Namespace } = require('@azure/service-bus');
+const { ServiceBusClient, TopicClient } = require('@azure/service-bus');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
@@ -19,7 +19,7 @@ module.exports = () => {
 			publications,
 		},
 	}) => {
-		connection = Namespace.createFromConnectionString(connectionString);
+		connection = ServiceBusClient.createFromConnectionString(connectionString);
 		topicClientFactory = factories.topics(connection);
 		queueClientFactory = factories.queue(connection);
 
@@ -55,13 +55,13 @@ module.exports = () => {
 				}
 			};
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
-			receiver.receive(onMessageHandler, onError, { autoComplete: false });
+			receiver.registerMessageHandler(onMessageHandler, onError, { autoComplete: false });
 		};
 
 		const peekDlq = async subscriptionId => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
+			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
 			const peekedMessage = await client.peek();
 			debug(`Peeked message from DLQ ${dlqName}`);
@@ -72,9 +72,9 @@ module.exports = () => {
 		const processDlq = async (subscriptionId, handler) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const dlqName = Namespace.getDeadLetterTopicPath(topic, subscription);
+			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const receiver = queueClientFactory.createReceiver(dlqName);
-			while ((messages = await receiver.receiveBatch(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+			while ((messages = await receiver.receiveMessages(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
 				debug('Processing message from DLQ');
 				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
 			}
