@@ -16,10 +16,21 @@ const config = {
 				strategy: 'retry',
 			},
 		},
+		duplicates: {
+			topic: 'duplicates.test',
+			subscription: 'test',
+			errorHandling: {
+				strategy: 'retry',
+			},
+		},
 	},
 	publications: {
 		fire: {
 			topic: stressTopic,
+			contentType: 'application/json',
+		},
+		duplicates: {
+			topic: 'duplicates.test',
 			contentType: 'application/json',
 		},
 	},
@@ -60,6 +71,55 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		busApi.safeSubscribe('assess', handler);
+		await attack(BULLETS);
+	}));
+
+	it('publishes messages with random IDs and receives only non duplicates', () => new Promise(async resolve => {
+		const BULLETS = 20;
+		const STEPS_FOR_ID_GENERATOR = 5;
+		const TARGET = 5;
+		const publishFire = busApi.publish('duplicates');
+
+		const getRandomIdGenerator = steps => {
+			let currentId = 0;
+			let currentSteps = steps;
+			return () => {
+				currentSteps--;
+				if (currentSteps === 0) {
+					currentId++;
+					currentSteps = steps;
+					return currentId;
+				}
+				return currentId;
+			};
+		};
+
+		const getRandomId = getRandomIdGenerator(STEPS_FOR_ID_GENERATOR);
+
+		const attack = async amount => {
+			const shots = Array.from(Array(amount).keys());
+			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
+				const id = getRandomId();
+				await publishFire(createPayload(), id); // eslint-disable-line no-await-in-loop
+			}
+		};
+
+		let received = 0;
+
+		const handler = () => received++;
+
+		let checkReceivedAttempt = 0;
+
+		setInterval(async () => {
+			if (received === TARGET) {
+				checkReceivedAttempt++;
+				const deadBodies = await busApi.peekDlq('assess');
+				expect(deadBodies.length).to.equal(0);
+				if (checkReceivedAttempt === 3) resolve();
+			}
+		}, 1000);
+
+		busApi.safeSubscribe('duplicates', handler);
 		await attack(BULLETS);
 	}));
 });
