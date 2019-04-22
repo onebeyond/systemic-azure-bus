@@ -30,6 +30,12 @@ module.exports = () => {
 			return topicApi.publish(sender);
 		};
 
+		const getProperties = message => ({
+			entity: message._context.entityPath,
+			messageId: message.messageId,
+		});
+
+
 		const subscribe = onError => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
@@ -44,7 +50,7 @@ module.exports = () => {
 
 				try {
 					debug(`Handling message on topic ${topic}`);
-					await handler({ body: brokeredMessage.body, userProperties: brokeredMessage.userProperties });
+					await handler({ body: brokeredMessage.body, userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
 					await brokeredMessage.complete();
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
