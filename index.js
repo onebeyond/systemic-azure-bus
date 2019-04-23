@@ -105,9 +105,9 @@ module.exports = () => {
 		await queueClientFactory.stop();
 		debug('Stopping service bus connection...');
 		await connection.close();
-		const checkifSubscriptionIsEmpty = () => new Promise(accept => setInterval(() => {
+		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
 			debug(`Trying to stop component | ${enqueuedItems} items remaining`);
-			enqueuedItems === 0 && accept(); // eslint-disable-line no-unused-expressions
+			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
 		}, 100));
 		await checkifSubscriptionIsEmpty();
 	};
