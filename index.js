@@ -11,6 +11,7 @@ module.exports = () => {
 	let connection;
 	let topicClientFactory;
 	let queueClientFactory;
+	let enqueuedItems = 0;
 
 	const start = async ({
 		config: {
@@ -47,8 +48,9 @@ module.exports = () => {
 					deadLetter: errorStrategies.deadLetter(topic),
 					exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory),
 				};
-
 				try {
+					enqueuedItems++;
+					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
 					await handler({ body: brokeredMessage.body, userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
 					await brokeredMessage.complete();
@@ -58,6 +60,9 @@ module.exports = () => {
 					debug(`Handling error with strategy ${errorStrategy} on topic ${topic}`);
 					const errorHandler = topicErrorStrategies[errorStrategy] || topicErrorStrategies.retry;
 					await errorHandler(brokeredMessage, errorHandling || {});
+				} finally {
+					enqueuedItems--;
+					debug(`Enqueued items decrease | ${enqueuedItems} items`);
 				}
 			};
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
@@ -100,6 +105,11 @@ module.exports = () => {
 		await queueClientFactory.stop();
 		debug('Stopping service bus connection...');
 		await connection.close();
+		const checkifSubscriptionIsEmpty = () => new Promise(accept => setInterval(() => {
+			debug(`Trying to stop component | ${enqueuedItems} items remaining`);
+			enqueuedItems === 0 && accept(); // eslint-disable-line no-unused-expressions
+		}, 100));
+		await checkifSubscriptionIsEmpty();
 	};
 
 	return { start, stop };
