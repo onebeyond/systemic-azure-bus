@@ -99,8 +99,8 @@ describe('Topics - Systemic Azure Bus API', () => {
 		const attack = async amount => {
 			const shots = Array.from(Array(amount).keys());
 			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
-				const id = getRandomId();
-				await publishFire(createPayload(), id); // eslint-disable-line no-await-in-loop
+				const messageId = getRandomId();
+				await publishFire(createPayload(), { messageId }); // eslint-disable-line no-await-in-loop
 			}
 		};
 
