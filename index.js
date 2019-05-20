@@ -34,6 +34,7 @@ module.exports = () => {
 		const getProperties = message => ({
 			entity: message._context.entityPath,
 			messageId: message.messageId,
+			contentType: message._amqpMessage.content_type,
 		});
 
 
