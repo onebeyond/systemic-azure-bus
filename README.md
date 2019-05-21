@@ -1,25 +1,87 @@
 # systemic-azure-bus
-A systemic component to deal with azure bus topics and queues subscriptions and publications
 
-A configuration example would be:
+Systemic Azure Bus is a [systemic component](https://github.com/guidesmiths/systemic) for the [Azure Service Bus SDK](https://github.com/Azure/azure-sdk-for-js). Its goal is to help you deal with azure bus topics and queues subscriptions and publications.
 
-```json
+This library:
+
+* enforces the client to use a particular, sensible configuration
+* provides safe defaults for configuration
+* Exposes an easy interface for publication/subscription
+* Solves error handling
+* Allows clients to easily retry, retry with exponential backoff or dead letter a failed message
+* Opens/closes the connections
+
+## Configuration
+
+A typical, simple configuration looks like this:
+
+``` js
 {
-  "bus": {
-		"publications": {
-			"emailSent": {
-				"topic": "email-service.v1.email.sent"
-			},
-			"emailError": {
-				"topic": "email-service.v1.email.error"
-			}
+	connection: {
+		connectionString: process.env.AZURE_SERVICEBUS_CONNECTION_STRING,
+	},
+	subscriptions: {
+		topicSubscriptionName: {
+			topic: 'myTopic',
+			subscription: 'myTopic.action'
 		},
-		"subscriptions": {
-			"orderPlaced": {
-				"topic": "klopotek.v1.order.confirmed",
-				"subscription": "email.order_confirmed.send"
-			}
-		}
-  }
+	},
+	publications: {
+		topicPublicationName: {
+			topic: 'myDestinationTopic',
+			contentType: 'application/json', // optional - default is json
+		},
+	},
 }
 ```
+
+### Systemic API
+
+```
+const initBus = require('systemic-azure-bus');
+const { start, stop } = initBus();
+...
+const api = await start({ config }); // configuration similar to the one above
+```
+
+## Topics API
+
+### Publish
+```
+const publicationId = 'topicPublicationName'; // declared in config
+const publishInMyPublication = api.publish(publicationId);
+await publishInMyPublication({ foo: 'bar' });
+```
+
+### Subscribe
+We provide a streaming API to subscribe to a topic and process messages flowing in.
+```
+const subscriptionId = 'topicSubscriptionName'; // declared in config
+const subscribe = api.subscribe(console.error); // how to handle error
+const handler = ({ body, userProperties }) => {
+ // do something with message...
+};
+subscribe(subscriptionId, handler);
+```
+
+### Peek DLQ
+When a message goes to DLQ (Dead Letter Queue) we could peek those messages with this operation.
+
+´´´
+const subscriptionId = 'topicSubscriptionName'; // declared in config
+const deadMessage = await api.peekDlq(subscriptionId); // retrieves only one
+´´´
+
+### Process DLQ
+Sometimes we need to process messages in DLQ, i.e. to purge it or to republish and reprocess them. We provide a streaming API to process them.
+
+´´´
+const handler = ({ body, userProperties }) => {
+ // do something with message...
+};
+const subscriptionId = 'topicSubscriptionName'; // declared in config
+api.processDlq(subscriptionId, handler);
+´´´
+
+## Error handling
+
