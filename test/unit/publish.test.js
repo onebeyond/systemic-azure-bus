@@ -28,6 +28,13 @@ describe('Publish  message on Topic', () => {
 		resolve();
 	}));
 
+	it('Should publish - zlib', () => new Promise(async resolve => {
+		const sender = createSender(3);
+		const publishMessage = publish(sender);
+		await publishMessage(createPayload(), { contentEncoding: 'zlib' });
+		resolve();
+	}));
+
 	it('Should not publish', () => new Promise(async resolve => {
 		const sender = createSender(5);
 		const publishMessage = publish(sender);

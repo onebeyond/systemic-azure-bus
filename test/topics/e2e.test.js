@@ -74,6 +74,18 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await attack(BULLETS);
 	}));
 
+	it('publish a message encoded with zlib and decodes it properly', () => new Promise(async resolve => {
+		const payload = createPayload();
+
+		const handler = async message => {
+			expect(message.body).to.eql(payload);
+			resolve();
+		};
+
+		busApi.safeSubscribe('assess', handler);
+		await busApi.publish('fire')(payload, { contentEncoding: 'zlib' }); // eslint-disable-line no-await-in-loop
+	}));
+
 	it('publishes messages with random IDs and receives only non duplicates', () => new Promise(async resolve => {
 		const BULLETS = 20;
 		const STEPS_FOR_ID_GENERATOR = 5;

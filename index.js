@@ -1,4 +1,5 @@
 const debug = require('debug')('systemic-azure-bus');
+const zlib = require('zlib');
 const { join } = require('path');
 const requireAll = require('require-all');
 const { ServiceBusClient, TopicClient } = require('@azure/service-bus');
@@ -6,6 +7,13 @@ const { ServiceBusClient, TopicClient } = require('@azure/service-bus');
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
 const topicApi = requireAll(join(__dirname, 'lib', 'operations', 'topics'));
+
+const decodingStrategies = {
+	zlib: body => JSON.parse(zlib.inflateSync(body)),
+	default: body => body,
+};
+
+const getBodyDecoded = (body, contentEncoding) => (decodingStrategies[contentEncoding] || decodingStrategies.default)(body);
 
 module.exports = () => {
 	let connection;
@@ -53,7 +61,7 @@ module.exports = () => {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					await handler({ body: brokeredMessage.body, userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
+					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.userProperties.contentEncoding), userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
 					await brokeredMessage.complete();
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
