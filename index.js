@@ -20,6 +20,7 @@ module.exports = () => {
 	let topicClientFactory;
 	let queueClientFactory;
 	let enqueuedItems = 0;
+	const senders = [];
 
 	const start = async ({
 		config: {
@@ -35,7 +36,11 @@ module.exports = () => {
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
-			const sender = topicClientFactory.createSender(topic);
+			let { sender } = senders.find(s => s.publicationId === publicationId) || {};
+			if (!sender) {
+				sender = topicClientFactory.createSender(topic);
+				senders.push({ publicationId, sender });
+			}
 			return topicApi.publish(sender);
 		};
 
