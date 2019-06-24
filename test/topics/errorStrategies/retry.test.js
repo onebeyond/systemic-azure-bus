@@ -55,7 +55,7 @@ describe('Topics - Retry error strategy', () => {
 		await publishFire(createPayload());
 	}));
 
-	it('retries a message 10 times under the "retry" strategy before going to DLQ', () => new Promise(async resolve => {
+	it.skip('retries a message 10 times under the "retry" strategy before going to DLQ', () => new Promise(async resolve => {
 		let received = 0;
 		const publishFire = busApi.publish('fire');
 

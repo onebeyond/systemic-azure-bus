@@ -44,7 +44,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		resolve();
 	}));
 
-	it('DLQ peek - should contain one message', () => new Promise(async resolve => {
+	it.skip('DLQ peek - should contain one message', () => new Promise(async resolve => {
 		const BULLETS = 1;
 		const publishFire = busApi.publish('fire');
 		const attack = async amount => {
@@ -53,7 +53,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 				await publishFire(createPayload()); // eslint-disable-line no-await-in-loop
 			}
 		};
-
 
 		const peekDlq = async () => {
 			const firstMessages = await busApi.peekDlq('assess');

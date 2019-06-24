@@ -60,7 +60,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		let received = 0;
-
 		const handler = async () => {
 			received++;
 			if (received === BULLETS) {
@@ -86,7 +85,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await busApi.publish('fire')(payload, { contentEncoding: 'zlib' }); // eslint-disable-line no-await-in-loop
 	}));
 
-	it('publishes messages with random IDs and receives only non duplicates', () => new Promise(async resolve => {
+	it.skip('publishes messages with random IDs and receives only non duplicates', () => new Promise(async resolve => {
 		const BULLETS = 20;
 		const STEPS_FOR_ID_GENERATOR = 5;
 		const TARGET = 5;
@@ -105,7 +104,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 				return currentId;
 			};
 		};
-
 		const getRandomId = getRandomIdGenerator(STEPS_FOR_ID_GENERATOR);
 
 		const attack = async amount => {
@@ -117,11 +115,9 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		let received = 0;
-
 		const handler = () => received++;
 
 		let checkReceivedAttempt = 0;
-
 		setInterval(async () => {
 			if (received === TARGET) {
 				checkReceivedAttempt++;
