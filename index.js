@@ -113,9 +113,11 @@ module.exports = () => {
 			const createClient = name => connection.createSubscriptionClient(getConfigTopic(name), getConfigSubscription(name));
 
 			const clients = subscriptionNames.map(createClient);
-			const checks = clients.map(c => c.peek());
-			clients.forEach(c => c.close());
-			return Promise.all(checks);
+			const healthchecks = clients.map(c => c.peek());
+			const healthcheckResults = await Promise.all(healthchecks);
+			await Promise.all(clients.map(c => c.close()));
+
+			return healthcheckResults;
 		};
 
 		return {
