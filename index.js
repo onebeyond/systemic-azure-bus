@@ -89,7 +89,7 @@ module.exports = () => {
 			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
 			const peekedMessage = await client.peek();
-			debug(`Peeked message from DLQ ${dlqName}`);
+			debug(`Peeked message ${peekedMessage.messageId} (${peekedMessage.body}) from DLQ ${dlqName}`);
 			await client.close();
 			return peekedMessage;
 		};
@@ -106,7 +106,20 @@ module.exports = () => {
 			receiver.close();
 		};
 
+		const health = async () => {
+			const subscriptionNames = Object.keys(subscriptions);
+			const getConfigTopic = name => subscriptions[name].topic;
+			const getConfigSubscription = name => subscriptions[name].subscription;
+			const createClient = name => connection.createSubscriptionClient(getConfigTopic(name), getConfigSubscription(name));
+
+			const clients = subscriptionNames.map(createClient);
+			const checks = clients.map(c => c.peek());
+			clients.forEach(c => c.close());
+			return Promise.all(checks);
+		};
+
 		return {
+			health,
 			publish,
 			subscribe,
 			peekDlq,
@@ -120,10 +133,11 @@ module.exports = () => {
 		debug('Stopping service bus connection...');
 		await connection.close();
 		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
-			debug(`Trying to stop component | ${enqueuedItems} items remaining`);
+			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
 			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
 		}, 100));
 		await checkifSubscriptionIsEmpty();
+		sendersByPublication.length = 0;
 	};
 
 	return { start, stop };

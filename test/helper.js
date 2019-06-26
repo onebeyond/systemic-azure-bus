@@ -16,6 +16,7 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 		return Promise.resolve();
 	};
 	const deadBodies = await bus.peekDlq(subscriptionId);
+	debug(`Peeked ${deadBodies.length} messages in DLQ of ${subscriptionId}`);
 	if (deadBodies.length === 0) return;
 	await bus.processDlq(subscriptionId, accept);
 };
@@ -29,6 +30,7 @@ const start = async ({ config }) => {
 		peekDlq: bus.peekDlq,
 		purgeDlqBySubcriptionId,
 		processDlq: bus.processDlq,
+		health: bus.health,
 	};
 };
 
