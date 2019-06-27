@@ -83,15 +83,15 @@ module.exports = () => {
 			receiver.registerMessageHandler(onMessageHandler, onError, { autoComplete: false });
 		};
 
-		const peekDlq = async subscriptionId => {
+		const peekDlq = async (subscriptionId, n) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
-			const peekedMessage = await client.peek();
-			debug(`Peeked message ${peekedMessage.messageId} (${peekedMessage.body}) from DLQ ${dlqName}`);
+			const peekedMessages = await client.peek(n);
+			debug(`${peekedMessages.length} peeked messages from DLQ ${dlqName}`);
 			await client.close();
-			return peekedMessage;
+			return peekedMessages;
 		};
 
 		const processDlq = async (subscriptionId, handler) => {
