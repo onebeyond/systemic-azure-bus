@@ -38,13 +38,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await bus.stop();
 	});
 
-	it('DLQ peek - should be empty', () => new Promise(async resolve => {
+	it('DLQ peek - should be empty', async () => {
 		const messages = await busApi.peekDlq('assess');
 		expect(messages.length).to.be(0);
-		resolve();
-	}));
+	});
 
-	it.skip('DLQ peek - should contain one message', () => new Promise(async resolve => {
+	it('DLQ peek - should contain one message', () => new Promise(async resolve => {
 		const BULLETS = 1;
 		const publishFire = busApi.publish('fire');
 		const attack = async amount => {
@@ -55,11 +54,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		const peekDlq = async () => {
-			const firstMessages = await busApi.peekDlq('assess');
-			const emptyMessages = await busApi.peekDlq('assess');
+			const firstMessage = await busApi.peekDlq('assess');
+			const moreMessages = await busApi.peekDlq('assess', 10);
 
-			expect(firstMessages.length).to.be(1);
-			expect(emptyMessages.length).to.be(0);
+			expect(firstMessage.length).to.be(1);
+			expect(moreMessages.length).to.be(1);
+			expect(firstMessage[0]).to.be.eql(moreMessages[0]);
 			resolve();
 		};
 
@@ -84,8 +84,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 			}
 		};
 
-
-		const purgeDlqBySubcriptionId = async () => {
+		const purgeDlqForSubscription = async () => {
 			let receivedMessagesInDLQ = 0;
 			const accept = async message => {
 				receivedMessagesInDLQ++;
@@ -98,6 +97,9 @@ describe('Topics - Systemic Azure Bus API', () => {
 				}
 				return Promise.resolve();
 			};
+
+			const allMessages = await busApi.peekDlq('assess', BULLETS);
+			expect(allMessages.length).to.be(BULLETS);
 			await busApi.processDlq('assess', accept);
 		};
 
@@ -109,6 +111,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 		busApi.safeSubscribe('assess', handler);
 		await attack(BULLETS);
-		schedule(purgeDlqBySubcriptionId);
+		schedule(purgeDlqForSubscription);
 	}));
 });
