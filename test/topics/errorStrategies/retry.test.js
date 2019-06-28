@@ -55,7 +55,7 @@ describe('Topics - Retry error strategy', () => {
 		await publishFire(createPayload());
 	}));
 
-	it.skip('retries a message 10 times under the "retry" strategy before going to DLQ', () => new Promise(async resolve => {
+	it('retries a message 3 times under the "retry" strategy before going to DLQ', () => new Promise(async resolve => {
 		let received = 0;
 		const publishFire = busApi.publish('fire');
 
@@ -67,7 +67,7 @@ describe('Topics - Retry error strategy', () => {
 
 		const handler = async () => {
 			received++;
-			if (received === 10) {
+			if (received === 3) {
 				schedule(confirmDeath);
 				throw new Error('Throwing the last error to end up in DLQ');
 			} else {
