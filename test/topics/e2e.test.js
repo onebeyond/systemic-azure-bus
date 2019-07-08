@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload } = require('../helper');
+const { bus, createPayload, schedule } = require('../helper');
 
 const stressTopic = 'stress.test';
 
@@ -42,10 +42,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 	beforeEach(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('duplicates');
 	});
 
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('duplicates');
 		await bus.stop();
 	});
 
@@ -60,7 +62,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		let received = 0;
-
 		const handler = async () => {
 			received++;
 			if (received === BULLETS) {
@@ -86,13 +87,15 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await busApi.publish('fire')(payload, { contentEncoding: 'zlib' }); // eslint-disable-line no-await-in-loop
 	}));
 
-	it('publishes messages with random IDs and receives only non duplicates', () => new Promise(async resolve => {
-		const BULLETS = 20;
-		const STEPS_FOR_ID_GENERATOR = 5;
-		const TARGET = 5;
-		const publishFire = busApi.publish('duplicates');
 
-		const getRandomIdGenerator = steps => {
+	it('removes duplicated messages based on messageId', () => new Promise(async resolve => {
+		const STEPS_FOR_ID_GENERATOR = 5;
+		const MESSAGES_TO_SEND = 20;
+		const EFFECTIVE_MESSAGES = 5;
+		const publishDups = busApi.publish('duplicates');
+		const receivedMessages = [];
+
+		const dupIdGenerator = steps => {
 			let currentId = 0;
 			let currentSteps = steps;
 			return () => {
@@ -105,33 +108,29 @@ describe('Topics - Systemic Azure Bus API', () => {
 				return currentId;
 			};
 		};
+		const getRandomDupId = dupIdGenerator(STEPS_FOR_ID_GENERATOR);
 
-		const getRandomId = getRandomIdGenerator(STEPS_FOR_ID_GENERATOR);
-
-		const attack = async amount => {
-			const shots = Array.from(Array(amount).keys());
+		const publishMessages = async () => {
+			const shots = Array.from(Array(MESSAGES_TO_SEND).keys());
 			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
-				const messageId = getRandomId();
-				await publishFire(createPayload(), { messageId }); // eslint-disable-line no-await-in-loop
+				const messageId = getRandomDupId();
+				const payload = createPayload();
+				await publishDups(payload, { messageId }); // eslint-disable-line no-await-in-loop
 			}
 		};
 
-		let received = 0;
+		const checkMessages = async () => {
+			expect(receivedMessages.length).to.be.eql(EFFECTIVE_MESSAGES);
 
-		const handler = () => received++;
+			const deadBodies = await busApi.peekDlq('duplicates');
+			expect(deadBodies.length).to.equal(0);
+			resolve();
+		};
 
-		let checkReceivedAttempt = 0;
-
-		setInterval(async () => {
-			if (received === TARGET) {
-				checkReceivedAttempt++;
-				const deadBodies = await busApi.peekDlq('assess');
-				expect(deadBodies.length).to.equal(0);
-				if (checkReceivedAttempt === 3) resolve();
-			}
-		}, 1000);
-
+		const handler = msg => receivedMessages.push(msg);
 		busApi.safeSubscribe('duplicates', handler);
-		await attack(BULLETS);
+
+		await publishMessages();
+		schedule(checkMessages);
 	}));
 });

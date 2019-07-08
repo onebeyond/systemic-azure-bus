@@ -83,15 +83,15 @@ module.exports = () => {
 			receiver.registerMessageHandler(onMessageHandler, onError, { autoComplete: false });
 		};
 
-		const peekDlq = async subscriptionId => {
+		const peekDlq = async (subscriptionId, n) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
-			const peekedMessage = await client.peek();
-			debug(`Peeked message from DLQ ${dlqName}`);
+			const peekedMessages = await client.peek(n);
+			debug(`${peekedMessages.length} peeked messages from DLQ ${dlqName}`);
 			await client.close();
-			return peekedMessage;
+			return peekedMessages;
 		};
 
 		const processDlq = async (subscriptionId, handler) => {
@@ -106,7 +106,22 @@ module.exports = () => {
 			receiver.close();
 		};
 
+		const health = async () => {
+			const subscriptionNames = Object.keys(subscriptions);
+			const getConfigTopic = name => subscriptions[name].topic;
+			const getConfigSubscription = name => subscriptions[name].subscription;
+			const createClient = name => connection.createSubscriptionClient(getConfigTopic(name), getConfigSubscription(name));
+
+			const clients = subscriptionNames.map(createClient);
+			const healthchecks = clients.map(c => c.peek());
+			const healthcheckResults = await Promise.all(healthchecks);
+			await Promise.all(clients.map(c => c.close()));
+
+			return healthcheckResults;
+		};
+
 		return {
+			health,
 			publish,
 			subscribe,
 			peekDlq,
@@ -120,10 +135,11 @@ module.exports = () => {
 		debug('Stopping service bus connection...');
 		await connection.close();
 		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
-			debug(`Trying to stop component | ${enqueuedItems} items remaining`);
+			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
 			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
 		}, 100));
 		await checkifSubscriptionIsEmpty();
+		sendersByPublication.length = 0;
 	};
 
 	return { start, stop };
