@@ -49,8 +49,7 @@ describe('Health check', () => {
 			const payload = createPayload();
 			await publish(payload);
 			const res = await busApi.health();
-			expect(res).not.to.be(undefined);
-			expect(res.length).to.be(Object.keys(config.subscriptions).length);
+			expect(res.status).to.eql('ok');
 
 			await busApi.safeSubscribe('assess', handler);
 		}));
@@ -58,7 +57,7 @@ describe('Health check', () => {
 		it('returns ok always the subscription is reachable/doesnt have any message', async () => {
 			// topic for the subscription has to be empty
 			const res = await busApi.health();
-			expect(res).not.to.be(undefined);
+			expect(res.status).to.eql('ok');
 		});
 	});
 });
