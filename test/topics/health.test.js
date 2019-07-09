@@ -36,7 +36,8 @@ describe('Health check', () => {
 			await bus.stop();
 		});
 
-		it('returns ok if there is messages in the queue', () => new Promise(async resolve => {
+		// eslint-disable-next-line no-unused-vars
+		it('returns ok if there is messages in the queue', () => new Promise(async (resolve, reject) => { // This must be refactorized
 			// should put a message in the topic
 			const publish = busApi.publish('fire');
 
@@ -46,12 +47,12 @@ describe('Health check', () => {
 				resolve();
 			};
 
+			await busApi.safeSubscribe('assess', handler);
+
 			const payload = createPayload();
 			await publish(payload);
 			const res = await busApi.health();
 			expect(res.status).to.eql('ok');
-
-			await busApi.safeSubscribe('assess', handler);
 		}));
 
 		it('returns ok always the subscription is reachable/doesnt have any message', async () => {
