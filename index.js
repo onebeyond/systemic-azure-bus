@@ -111,13 +111,22 @@ module.exports = () => {
 			const getConfigTopic = name => subscriptions[name].topic;
 			const getConfigSubscription = name => subscriptions[name].subscription;
 			const createClient = name => connection.createSubscriptionClient(getConfigTopic(name), getConfigSubscription(name));
-
-			const clients = subscriptionNames.map(createClient);
-			const healthchecks = clients.map(c => c.peek());
-			const healthcheckResults = await Promise.all(healthchecks);
-			await Promise.all(clients.map(c => c.close()));
-
-			return healthcheckResults;
+			let healthCheck;
+			try {
+				const clients = subscriptionNames.map(createClient);
+				const healthchecks = clients.map(c => c.peek());
+				await Promise.all(healthchecks);
+				await Promise.all(clients.map(c => c.close()));
+				healthCheck = {
+					status: 'ok',
+				};
+			} catch (err) {
+				healthCheck = {
+					status: 'error',
+					details: err.message,
+				};
+			}
+			return healthCheck;
 		};
 
 		return {
