@@ -51,7 +51,26 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await bus.stop();
 	});
 
-	it('publishes lots of messages and receives them all', () => new Promise(async resolve => {
+	it('publish a message with explicit messageId and check structure on receiving', () => new Promise(async resolve => {
+		const payload = createPayload();
+		const messageId = '1234567890';
+		const publish = busApi.publish('fire');
+
+		const handler = async msg => {
+			expect(msg).to.have.keys('body', 'properties', 'userProperties');
+
+			const { body, properties, userProperties } = msg;
+			expect(userProperties).to.be.an('object');
+			expect(body).to.be.eql(payload);
+			expect(properties.messageId).to.be.eql(messageId);
+			resolve();
+		};
+
+		busApi.safeSubscribe('assess', handler);
+		await publish(payload, { messageId });
+	}));
+
+	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 20;
 		const publishFire = busApi.publish('fire');
 		const attack = async amount => {
@@ -62,8 +81,9 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		let received = 0;
-		const handler = async () => {
+		const handler = async msg => {
 			received++;
+			expect(msg.properties.messageId.length).to.be.greaterThan(10);
 			if (received === BULLETS) {
 				const deadBodies = await busApi.peekDlq('assess');
 				expect(deadBodies.length).to.equal(0);
