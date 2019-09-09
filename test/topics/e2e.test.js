@@ -108,7 +108,10 @@ describe('Topics - Systemic Azure Bus API', () => {
 	}));
 
 
-	it('removes duplicated messages based on messageId', () => new Promise(async resolve => {
+	/**
+	 * This test is skipped because the service bus is not filtering duplicated messages on subscriptions
+	 */
+	it.skip('removes duplicated messages based on messageId', () => new Promise(async resolve => {
 		const STEPS_FOR_ID_GENERATOR = 5;
 		const MESSAGES_TO_SEND = 20;
 		const EFFECTIVE_MESSAGES = 5;
