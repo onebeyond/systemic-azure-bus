@@ -26,7 +26,7 @@ const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
 	try {
 		activeBodies = await bus.peekActive(subscriptionId, n);
 	} catch (error) {
-		console.log(error);
+		console.log(error); // eslint-disable-line no-console
 	}
 	const processActiveMessages = async () => new Promise((resolve, reject) => {
 		const timeout = setTimeout(() => {
@@ -41,7 +41,7 @@ const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
 				resolve();
 			}
 		};
-		const subscribe = () => bus.subscribe(console.error, console.log);
+		const subscribe = () => bus.subscribe(console.error, console.log); // eslint-disable-line no-console
 		subscribe()(subscriptionId, processMessage);
 	});
 	debug(`Peeked ${activeBodies.length} messages in DLQ of ${subscriptionId}`);
