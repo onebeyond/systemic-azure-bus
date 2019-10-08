@@ -21,7 +21,7 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 	await bus.processDlq(subscriptionId, accept);
 };
 
-const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
+const purgeBySubcriptionId = async (subscriptionId, n) => {
 	let activeMessages;
 	try {
 		activeMessages = await bus.peek(subscriptionId, n);
@@ -58,7 +58,7 @@ const start = async ({ config }) => {
 		peekDlq: bus.peekDlq,
 		peek: bus.peek,
 		purgeDlqBySubcriptionId,
-		purgeActiveBySubcriptionId,
+		purgeBySubcriptionId,
 		processDlq: bus.processDlq,
 		health: bus.health,
 	};

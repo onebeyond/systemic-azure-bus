@@ -30,11 +30,11 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 	beforeEach(async () => {
 		busApi = await bus.start({ config });
-		await busApi.purgeActiveBySubcriptionId('assess');
+		await busApi.purgeBySubcriptionId('assess');
 	});
 
 	afterEach(async () => {
-		await busApi.purgeActiveBySubcriptionId('assess');
+		await busApi.purgeBySubcriptionId('assess');
 		await bus.stop();
 	});
 
@@ -56,7 +56,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		const peek = async () => {
 			const peekedMessages = await busApi.peek('assess', 3);
 			expect(peekedMessages.length).to.be(3);
-			await busApi.purgeActiveBySubcriptionId('assess', 3);
+			await busApi.purgeBySubcriptionId('assess', 3);
 			resolve();
 		};
 
