@@ -21,6 +21,34 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 	await bus.processDlq(subscriptionId, accept);
 };
 
+const purgeBySubcriptionId = async (subscriptionId, n) => {
+	let activeMessages;
+	try {
+		activeMessages = await bus.peek(subscriptionId, n);
+	} catch (error) {
+		console.log(error); // eslint-disable-line no-console
+	}
+	const processActiveMessages = async () => new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			reject();
+		}, 5000);
+
+		let count = 0;
+		const processMessage = () => {
+			count++;
+			if (count === activeMessages.length) {
+				clearTimeout(timeout);
+				resolve();
+			}
+		};
+		const subscribe = () => bus.subscribe(console.error, console.log); // eslint-disable-line no-console
+		subscribe()(subscriptionId, processMessage);
+	});
+	debug(`Peeked ${activeMessages.length} messages in subscriptionId ${subscriptionId}`);
+	if (activeMessages.length === 0) return;
+	await processActiveMessages();
+};
+
 const start = async ({ config }) => {
 	debug('Initialising service bus API...');
 	bus = await busApi.start({ config });
@@ -28,7 +56,9 @@ const start = async ({ config }) => {
 		safeSubscribe: bus.subscribe(console.error, console.log), // eslint-disable-line no-console
 		publish: bus.publish,
 		peekDlq: bus.peekDlq,
+		peek: bus.peek,
 		purgeDlqBySubcriptionId,
+		purgeBySubcriptionId,
 		processDlq: bus.processDlq,
 		health: bus.health,
 	};
