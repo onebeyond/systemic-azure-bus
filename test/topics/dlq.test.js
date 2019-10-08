@@ -96,8 +96,8 @@ describe('Topics - Systemic Azure Bus API', () => {
 				}
 				return Promise.resolve();
 			};
-			const allMessages = await busApi.peekDlq('assess', (BULLETS - 1));
-			expect(allMessages.length).to.be(1);
+			const allMessages = await busApi.peekDlq('assess', BULLETS);
+			expect(allMessages.length).to.be(BULLETS);
 			await busApi.processDlq('assess', accept);
 		};
 

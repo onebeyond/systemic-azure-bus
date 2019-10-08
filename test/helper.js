@@ -21,6 +21,34 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 	await bus.processDlq(subscriptionId, accept);
 };
 
+const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
+	let activeBodies;
+	try {
+		activeBodies = await bus.peekActive(subscriptionId, n);
+	} catch (error) {
+		console.log(error);
+	}
+	const processActiveMessages = async () => new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			reject();
+		}, 5000);
+
+		let count = 0;
+		const processMessage = () => {
+			count++;
+			if (count === activeBodies.length) {
+				clearTimeout(timeout);
+				resolve();
+			}
+		};
+		const subscribe = () => bus.subscribe(console.error, console.log);
+		subscribe()(subscriptionId, processMessage);
+	});
+	debug(`Peeked ${activeBodies.length} messages in DLQ of ${subscriptionId}`);
+	if (activeBodies.length === 0) return;
+	await processActiveMessages();
+};
+
 const start = async ({ config }) => {
 	debug('Initialising service bus API...');
 	bus = await busApi.start({ config });
@@ -28,7 +56,9 @@ const start = async ({ config }) => {
 		safeSubscribe: bus.subscribe(console.error, console.log), // eslint-disable-line no-console
 		publish: bus.publish,
 		peekDlq: bus.peekDlq,
+		peekActive: bus.peekActive,
 		purgeDlqBySubcriptionId,
+		purgeActiveBySubcriptionId,
 		processDlq: bus.processDlq,
 		health: bus.health,
 	};

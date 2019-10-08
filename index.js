@@ -94,6 +94,16 @@ module.exports = () => {
 			return peekedMessages;
 		};
 
+		const peekActive = async (subscriptionId, n) => {
+			const { topic, subscription } = subscriptions[subscriptionId] || {};
+			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			const client = connection.createQueueClient(`${topic}/Subscriptions/${subscription}`);
+			const activeMessages = await client.peek(n);
+			debug(`${activeMessages.length} peeked messages from Active Queue`);
+			await client.close();
+			return activeMessages;
+		};
+
 		const processDlq = async (subscriptionId, handler) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
@@ -134,6 +144,7 @@ module.exports = () => {
 			publish,
 			subscribe,
 			peekDlq,
+			peekActive,
 			processDlq,
 		};
 	};
