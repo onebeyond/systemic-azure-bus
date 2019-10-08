@@ -94,7 +94,7 @@ module.exports = () => {
 			return peekedMessages;
 		};
 
-		const peekActive = async (subscriptionId, n) => {
+		const peek = async (subscriptionId, n) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const client = connection.createQueueClient(`${topic}/Subscriptions/${subscription}`);
@@ -144,7 +144,7 @@ module.exports = () => {
 			publish,
 			subscribe,
 			peekDlq,
-			peekActive,
+			peek,
 			processDlq,
 		};
 	};

@@ -24,7 +24,7 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
 	let activeBodies;
 	try {
-		activeBodies = await bus.peekActive(subscriptionId, n);
+		activeBodies = await bus.peek(subscriptionId, n);
 	} catch (error) {
 		console.log(error); // eslint-disable-line no-console
 	}
@@ -56,7 +56,7 @@ const start = async ({ config }) => {
 		safeSubscribe: bus.subscribe(console.error, console.log), // eslint-disable-line no-console
 		publish: bus.publish,
 		peekDlq: bus.peekDlq,
-		peekActive: bus.peekActive,
+		peek: bus.peek,
 		purgeDlqBySubcriptionId,
 		purgeActiveBySubcriptionId,
 		processDlq: bus.processDlq,

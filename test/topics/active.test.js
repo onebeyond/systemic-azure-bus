@@ -39,7 +39,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 	});
 
 	it('Active peek - should be empty', async () => {
-		const messages = await busApi.peekActive('assess', 1);
+		const messages = await busApi.peek('assess', 1);
 		expect(messages.length).to.be(0);
 	});
 
@@ -53,14 +53,14 @@ describe('Topics - Systemic Azure Bus API', () => {
 			}
 		};
 
-		const peekActive = async () => {
-			const peekedMessages = await busApi.peekActive('assess', 3);
+		const peek = async () => {
+			const peekedMessages = await busApi.peek('assess', 3);
 			expect(peekedMessages.length).to.be(3);
 			await busApi.purgeActiveBySubcriptionId('assess', 3);
 			resolve();
 		};
 
 		await attack(BULLETS);
-		schedule(peekActive);
+		schedule(peek);
 	}));
 });
