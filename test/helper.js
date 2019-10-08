@@ -22,9 +22,9 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 };
 
 const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
-	let activeBodies;
+	let activeMessages;
 	try {
-		activeBodies = await bus.peek(subscriptionId, n);
+		activeMessages = await bus.peek(subscriptionId, n);
 	} catch (error) {
 		console.log(error); // eslint-disable-line no-console
 	}
@@ -36,7 +36,7 @@ const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
 		let count = 0;
 		const processMessage = () => {
 			count++;
-			if (count === activeBodies.length) {
+			if (count === activeMessages.length) {
 				clearTimeout(timeout);
 				resolve();
 			}
@@ -44,8 +44,8 @@ const purgeActiveBySubcriptionId = async (subscriptionId, n) => {
 		const subscribe = () => bus.subscribe(console.error, console.log); // eslint-disable-line no-console
 		subscribe()(subscriptionId, processMessage);
 	});
-	debug(`Peeked ${activeBodies.length} messages in DLQ of ${subscriptionId}`);
-	if (activeBodies.length === 0) return;
+	debug(`Peeked ${activeMessages.length} messages in subscriptionId ${subscriptionId}`);
+	if (activeMessages.length === 0) return;
 	await processActiveMessages();
 };
 
