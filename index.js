@@ -116,6 +116,14 @@ module.exports = () => {
 			receiver.close();
 		};
 
+		const getSubscriptionRules = async subscriptionId => {
+			const { topic, subscription } = subscriptions[subscriptionId] || {};
+			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			const client = connection.createSubscriptionClient(topic, subscription);
+			let rules = await client.getRules();
+			return rules;
+		};
+
 		const health = async () => {
 			const subscriptionNames = Object.keys(subscriptions);
 			const getConfigTopic = name => subscriptions[name].topic;
@@ -146,6 +154,7 @@ module.exports = () => {
 			peekDlq,
 			peek,
 			processDlq,
+			getSubscriptionRules,
 		};
 	};
 
