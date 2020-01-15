@@ -64,24 +64,31 @@ const handler = ({ body, userProperties }) => {
 subscribe(subscriptionId, handler);
 ```
 
+### Get Subscription rules
+In the case we want to retrieve the rules applied to a subscription, we can use this.
+
+```
+let subscriptionRules = await bus.getSubscriptionRules('topicSubscriptionName');
+```
+
 ### Peek DLQ
 When a message goes to DLQ (Dead Letter Queue) we could peek those messages with this operation.
 
-´´´
+```
 const subscriptionId = 'topicSubscriptionName'; // declared in config
 const deadMessage = await api.peekDlq(subscriptionId); // retrieves only one
-´´´
+```
 
 ### Process DLQ
 Sometimes we need to process messages in DLQ, i.e. to purge it or to republish and reprocess them. We provide a streaming API to process them.
 
-´´´
+```
 const handler = ({ body, userProperties }) => {
  // do something with message...
 };
 const subscriptionId = 'topicSubscriptionName'; // declared in config
 api.processDlq(subscriptionId, handler);
-´´´
+```
 
 ## Error handling
 
