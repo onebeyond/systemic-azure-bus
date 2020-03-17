@@ -37,7 +37,7 @@ A typical, simple configuration looks like this:
 
 ### Systemic API
 
-```
+```js
 const initBus = require('systemic-azure-bus');
 const { start, stop } = initBus();
 ...
@@ -47,7 +47,7 @@ const api = await start({ config }); // configuration similar to the one above
 ## Topics API
 
 ### Publish
-```
+```js
 const publicationId = 'topicPublicationName'; // declared in config
 const publishInMyPublication = api.publish(publicationId);
 await publishInMyPublication({ foo: 'bar' });
@@ -55,7 +55,7 @@ await publishInMyPublication({ foo: 'bar' });
 
 ### Subscribe
 We provide a streaming API to subscribe to a topic and process messages flowing in.
-```
+```js
 const subscriptionId = 'topicSubscriptionName'; // declared in config
 const subscribe = api.subscribe(console.error); // how to handle error
 const handler = ({ body, userProperties }) => {
@@ -67,14 +67,14 @@ subscribe(subscriptionId, handler);
 ### Get Subscription rules
 In the case we want to retrieve the rules applied to a subscription, we can use this.
 
-```
+```js
 let subscriptionRules = await bus.getSubscriptionRules('topicSubscriptionName');
 ```
 
 ### Peek DLQ
 When a message goes to DLQ (Dead Letter Queue) we could peek those messages with this operation.
 
-```
+```js
 const subscriptionId = 'topicSubscriptionName'; // declared in config
 const deadMessage = await api.peekDlq(subscriptionId); // retrieves only one
 ```
@@ -82,7 +82,7 @@ const deadMessage = await api.peekDlq(subscriptionId); // retrieves only one
 ### Process DLQ
 Sometimes we need to process messages in DLQ, i.e. to purge it or to republish and reprocess them. We provide a streaming API to process them.
 
-```
+```js
 const handler = ({ body, userProperties }) => {
  // do something with message...
 };
