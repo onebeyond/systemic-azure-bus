@@ -73,7 +73,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		schedule(peekDlq);
 	}));
 
-	it('publishes lots of messages, sends them to DLQ and receives them all in DLQ', () => new Promise(async resolve => {
+	it.skip('publishes lots of messages, sends them to DLQ and receives them all in DLQ', () => new Promise(async resolve => {
 		const BULLETS = 10;
 		const publishFire = busApi.publish('fire');
 		const attack = async amount => {
