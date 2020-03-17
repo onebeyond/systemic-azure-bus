@@ -120,7 +120,7 @@ module.exports = () => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const client = connection.createSubscriptionClient(topic, subscription);
-			let rules = await client.getRules();
+			const rules = await client.getRules();
 			return rules;
 		};
 
