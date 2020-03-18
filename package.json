@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "mocha --reporter spec './test/**/*.test.js'",
-    "precommit": "npm run lint",
-    "prepush": "npm run test"
+    "test": "mocha --reporter spec './test/**/*.test.js'"
   },
   "keywords": [
     "systemic",
@@ -28,6 +26,13 @@
     "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-mocha": "^6.3.0",
     "expect.js": "^0.3.1",
-    "mocha": "^7.1.1"
+    "mocha": "^7.1.1",
+    "husky": "^4.2.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint",
+      "pre-push": "npm test"
+    }
   }
 }
