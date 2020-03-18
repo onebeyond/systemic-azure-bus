@@ -1,3 +1,4 @@
+/* eslint-disable no-async-promise-executor */
 const publish = require('../../lib/operations/topics/publish');
 
 const createPayload = () => ({ foo: Date.now() });

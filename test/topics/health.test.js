@@ -1,3 +1,4 @@
+/* eslint-disable no-async-promise-executor */
 require('dotenv').config();
 const expect = require('expect.js');
 const { bus, createPayload } = require('../helper');
