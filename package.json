@@ -1,6 +1,6 @@
 {
   "name": "systemic-azure-bus",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "description": "A systemic component for azure bus",
   "main": "index.js",
   "scripts": {
