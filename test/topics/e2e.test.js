@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload, schedule } = require('../helper');
+const { bus, createPayload, schedule, attack } = require('../helper'); // eslint-disable-line object-curly-newline
 
 const stressTopic = 'stress.test';
 
@@ -73,12 +73,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 20;
 		const publishFire = busApi.publish('fire');
-		const attack = async amount => {
-			const shots = Array.from(Array(amount).keys());
-			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
-				await publishFire(createPayload()); // eslint-disable-line no-await-in-loop
-			}
-		};
 
 		let received = 0;
 		const handler = async msg => {
@@ -92,7 +86,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		};
 
 		busApi.safeSubscribe('assess', handler);
-		await attack(BULLETS);
+		await attack(BULLETS, publishFire);
 	}));
 
 	it('publish a message encoded with zlib and decodes it properly', () => new Promise(async resolve => {
