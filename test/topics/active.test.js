@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload, schedule } = require('../helper');
+const { bus, schedule, attack } = require('../helper');
 
 const stressTopic = 'stress.test';
 
@@ -46,12 +46,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 	it('Active peek - should contain three message', () => new Promise(async resolve => {
 		const BULLETS = 3;
 		const publishFire = busApi.publish('fire');
-		const attack = async amount => {
-			const shots = Array.from(Array(amount).keys());
-			for (shot in shots) { // eslint-disable-line guard-for-in,no-restricted-syntax
-				await publishFire(createPayload()); // eslint-disable-line no-await-in-loop
-			}
-		};
 
 		const peek = async () => {
 			const peekedMessages = await busApi.peek('assess', 3);
@@ -60,7 +54,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 			resolve();
 		};
 
-		await attack(BULLETS);
+		await attack(BULLETS, publishFire);
 		schedule(peek);
 	}));
 });

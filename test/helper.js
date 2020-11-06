@@ -7,6 +7,12 @@ const busApi = initBus();
 const enoughTime = 500;
 const schedule = fn => setTimeout(fn, enoughTime);
 const createPayload = () => ({ foo: Date.now() });
+const attack = async (amount, publishFire) => {
+	await publishFire(createPayload());
+	--amount; // eslint-disable-line no-param-reassign
+	amount && attack(amount, publishFire); // eslint-disable-line no-unused-expressions
+};
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 let bus;
 
@@ -60,6 +66,7 @@ const start = async ({ config }) => {
 		purgeDlqBySubcriptionId,
 		purgeBySubcriptionId,
 		processDlq: bus.processDlq,
+		emptyDlq: bus.emptyDlq,
 		health: bus.health,
 	};
 };
@@ -72,5 +79,7 @@ const stop = async () => {
 module.exports = {
 	createPayload,
 	schedule,
+	attack,
+	sleep,
 	bus: { start, stop },
 };

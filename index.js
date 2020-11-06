@@ -1,8 +1,9 @@
+/* eslint-disable no-await-in-loop */
 const debug = require('debug')('systemic-azure-bus');
 const zlib = require('zlib');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { ServiceBusClient, TopicClient } = require('@azure/service-bus');
+const { ServiceBusClient, TopicClient, ReceiveMode } = require('@azure/service-bus');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
@@ -116,6 +117,35 @@ module.exports = () => {
 			receiver.close();
 		};
 
+		const emptyDlq = async subscriptionId => {
+			const { topic, subscription } = subscriptions[subscriptionId] || {};
+			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
+			try {
+				const receiver = queueClientFactory.createReceiver(dlqName, ReceiveMode.receiveAndDelete);
+				let messagesPending = true;
+				const getMessagesFromDlq = async () => {
+					const messages = await receiver.receiveMessages(50, 10);
+					if (messages.length === 0) {
+						debug('There are no messages in this Dead Letter Queue');
+						messagesPending = false;
+					} else if (messages.length < 50) {
+						debug(`processing last ${messages.length} messages from DLQ`);
+						messagesPending = false;
+					} else {
+						debug('processing last 50 messages from DLQ');
+					}
+				};
+				while (messagesPending) {
+					await getMessagesFromDlq();
+				}
+				await receiver.close();
+			} catch (err) {
+				debug(`Error while deleting dead letter queue: ${err.message}`);
+				throw (err);
+			}
+		};
+
 		const getSubscriptionRules = async subscriptionId => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
@@ -154,6 +184,7 @@ module.exports = () => {
 			peekDlq,
 			peek,
 			processDlq,
+			emptyDlq,
 			getSubscriptionRules,
 		};
 	};
