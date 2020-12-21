@@ -30,7 +30,7 @@ module.exports = () => {
 			publications,
 		},
 	}) => {
-		connection = ServiceBusClient.createFromConnectionString(connectionString);
+		connection = new ServiceBusClient(connectionString);
 		topicClientFactory = factories.topics(connection);
 		queueClientFactory = factories.queue(connection);
 
