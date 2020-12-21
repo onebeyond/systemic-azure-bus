@@ -98,10 +98,10 @@ module.exports = () => {
 		const peek = async (subscriptionId, n = 1) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const queueSender = connection.createSender(`${topic}/Subscriptions/${subscription}`);
-			const activeMessages = await queueSender.peekMessages(n);
+			const queueReceiver = connection.createReceiver(`${topic}/Subscriptions/${subscription}`);
+			const activeMessages = await queueReceiver.peekMessages(n);
 			debug(`${activeMessages.length} peeked messages from Active Queue`);
-			await queueSender.close();
+			await queueReceiver.close();
 			return activeMessages;
 		};
 
