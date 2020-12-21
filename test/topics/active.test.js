@@ -43,7 +43,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		expect(messages.length).to.be(0);
 	});
 
-	it('Active peek - should contain three message', () => new Promise(async resolve => {
+	it('Active peek - should contain three messages', () => new Promise(async resolve => {
 		const BULLETS = 3;
 		const publishFire = busApi.publish('fire');
 
