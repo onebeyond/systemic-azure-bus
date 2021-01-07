@@ -6,7 +6,7 @@ const createPayload = () => ({ foo: Date.now() });
 const createSender = (maxAttempts = 2) => {
 	let attempts = 0;
 
-	const send = async () => {
+	const sendMessages = async () => {
 		if (attempts < (maxAttempts - 1)) {
 			attempts++;
 			throw new Error();
@@ -15,7 +15,7 @@ const createSender = (maxAttempts = 2) => {
 	};
 
 	return {
-		send,
+		sendMessages,
 	};
 };
 
