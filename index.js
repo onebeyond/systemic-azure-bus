@@ -3,7 +3,7 @@ const debug = require('debug')('systemic-azure-bus');
 const zlib = require('zlib');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { ServiceBusClient, TopicClient, ReceiveMode } = require('@azure/service-bus');
+const { ServiceBusClient, ReceiveMode } = require('@azure/service-bus');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
@@ -90,14 +90,25 @@ module.exports = () => {
 			}, { autoCompleteMessages: false });
 		};
 
-		const peekDlq = async (subscriptionId, messagesNumber) => {
+		const peekDlq = async (subscriptionId, messagesNumber = 1) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
-			const client = connection.createQueueClient(dlqName);
-			const peekedMessages = await client.peek(messagesNumber);
-			debug(`${peekedMessages.length} peeked messages from DLQ ${dlqName}`);
-			await client.close();
+
+			// Old way
+			// const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
+			// const client = connection.createQueueClient(dlqName);
+			// const peekedMessages = await dlqName.peek(messagesNumber);
+
+			// We need to create a receiver of the deleted queue
+			// from the subscription of the topic
+			// Then receive the messages from that queue
+			// https://github.com/Azure/azure-sdk-for-js/blob/master/sdk/servicebus/service-bus/samples/javascript/advanced/processMessageFromDLQ.js
+
+			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
+
+			const peekedMessages = await deletedQueueReceiver.receiveMessages(messagesNumber);
+			debug(`${peekedMessages.length} peeked messages from DLQ ${deletedQueueReceiver}`);
+			await deletedQueueReceiver.close();
 			return peekedMessages;
 		};
 
