@@ -90,22 +90,22 @@ module.exports = () => {
 			}, { autoCompleteMessages: false });
 		};
 
-		const peekDlq = async (subscriptionId, n) => {
+		const peekDlq = async (subscriptionId, messagesNumber) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
 			const client = connection.createQueueClient(dlqName);
-			const peekedMessages = await client.peek(n);
+			const peekedMessages = await client.peek(messagesNumber);
 			debug(`${peekedMessages.length} peeked messages from DLQ ${dlqName}`);
 			await client.close();
 			return peekedMessages;
 		};
 
-		const peek = async (subscriptionId, n = 1) => {
+		const peek = async (subscriptionId, messagesNumber = 1) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 			const queueReceiver = connection.createReceiver(`${topic}/Subscriptions/${subscription}`);
-			const activeMessages = await queueReceiver.peekMessages(n);
+			const activeMessages = await queueReceiver.peekMessages(messagesNumber);
 			debug(`${activeMessages.length} peeked messages from Active Queue`);
 			await queueReceiver.close();
 			return activeMessages;
