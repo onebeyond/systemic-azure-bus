@@ -81,28 +81,13 @@ module.exports = () => {
 				}
 			};
 
-			// TODO:
-			/*
-			const myMessageHandler = async (message) => {
-				// your code here
-				console.log(`message.body: ${message.body}`);
-			};
-			const myErrorHandler = async (args) => {
-				console.log(
-					`Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
-					args.error
-				);
-			};
-			receiver.subscribe({
-				processMessage: myMessageHandler,
-				processError: myErrorHandler
-			});
-			 */
-
 
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
 			// receiver.registerMessageHandler(onMessageHandler, onError, { autoComplete: false });
-			receiver.subscribe(onMessageHandler);
+			receiver.subscribe({
+				processMessage: onMessageHandler,
+				processError: onError,
+			}, { autoCompleteMessages: false });
 		};
 
 		const peekDlq = async (subscriptionId, n) => {
