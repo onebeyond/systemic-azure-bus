@@ -125,13 +125,15 @@ module.exports = () => {
 		const processDlq = async (subscriptionId, handler) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
-			const receiver = queueClientFactory.createReceiver(dlqName);
-			while ((messages = await receiver.receiveMessages(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+
+
+			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
+
+			while ((messages = await deletedQueueReceiver.receiveMessages(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
 				debug('Processing message from DLQ');
 				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
 			}
-			receiver.close();
+			await deletedQueueReceiver.close();
 		};
 
 		const emptyDlq = async subscriptionId => {
