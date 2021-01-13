@@ -94,16 +94,6 @@ module.exports = () => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 
-			// Old way
-			// const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
-			// const client = connection.createQueueClient(dlqName);
-			// const peekedMessages = await dlqName.peek(messagesNumber);
-
-			// We need to create a receiver of the deleted queue
-			// from the subscription of the topic
-			// Then receive the messages from that queue
-			// https://github.com/Azure/azure-sdk-for-js/blob/master/sdk/servicebus/service-bus/samples/javascript/advanced/processMessageFromDLQ.js
-
 			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
 
 			const peekedMessages = await deletedQueueReceiver.receiveMessages(messagesNumber);
