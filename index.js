@@ -96,7 +96,7 @@ module.exports = () => {
 
 			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
 
-			const peekedMessages = await deletedQueueReceiver.receiveMessages(messagesNumber);
+			const peekedMessages = await deletedQueueReceiver.receiveMessages(messagesNumber, { maxWaitTimeInMs: 10000 });
 			debug(`${peekedMessages.length} peeked messages from DLQ ${deletedQueueReceiver}`);
 			await deletedQueueReceiver.close();
 			return peekedMessages;
@@ -118,7 +118,7 @@ module.exports = () => {
 
 			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
 
-			while ((messages = await deletedQueueReceiver.receiveMessages(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+			while ((messages = await deletedQueueReceiver.receiveMessages(1, { maxWaitTimeInMs: 10000 })) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
 				debug('Processing message from DLQ');
 				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
 			}
@@ -134,7 +134,7 @@ module.exports = () => {
 
 				let messagesPending = true;
 				const getMessagesFromDlq = async () => {
-					const messages = await deletedQueueReceiver.receiveMessages(50, 10);
+					const messages = await deletedQueueReceiver.receiveMessages(50, { maxWaitTimeInMs: 10000 });
 					if (messages.length === 0) {
 						debug('There are no messages in this Dead Letter Queue');
 						messagesPending = false;
