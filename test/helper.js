@@ -18,7 +18,7 @@ let bus;
 
 const purgeDlqBySubcriptionId = async subscriptionId => {
 	const accept = async message => {
-		await message.complete();
+		await message.completeMessage();
 		return Promise.resolve();
 	};
 	const deadBodies = await bus.peekDlq(subscriptionId);
