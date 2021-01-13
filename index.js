@@ -3,7 +3,7 @@ const debug = require('debug')('systemic-azure-bus');
 const zlib = require('zlib');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { ServiceBusClient, ReceiveMode } = require('@azure/service-bus');
+const { ServiceBusClient } = require('@azure/service-bus');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
@@ -116,7 +116,6 @@ module.exports = () => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 
-
 			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
 
 			while ((messages = await deletedQueueReceiver.receiveMessages(1, 5)) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
@@ -129,12 +128,13 @@ module.exports = () => {
 		const emptyDlq = async subscriptionId => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const dlqName = TopicClient.getDeadLetterTopicPath(topic, subscription);
+
 			try {
-				const receiver = queueClientFactory.createReceiver(dlqName, ReceiveMode.receiveAndDelete);
+				const deletedQueueReceiver = connection.createReceiver(topic, { receiveMode: 'receiveAndDelete' });
+
 				let messagesPending = true;
 				const getMessagesFromDlq = async () => {
-					const messages = await receiver.receiveMessages(50, 10);
+					const messages = await deletedQueueReceiver.receiveMessages(50, 10);
 					if (messages.length === 0) {
 						debug('There are no messages in this Dead Letter Queue');
 						messagesPending = false;
@@ -148,7 +148,7 @@ module.exports = () => {
 				while (messagesPending) {
 					await getMessagesFromDlq();
 				}
-				await receiver.close();
+				await deletedQueueReceiver.close();
 			} catch (err) {
 				debug(`Error while deleting dead letter queue: ${err.message}`);
 				throw (err);
