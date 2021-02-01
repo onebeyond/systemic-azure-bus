@@ -134,7 +134,7 @@ module.exports = () => {
 
 				let messagesPending = true;
 				const getMessagesFromDlq = async () => {
-					const messages = await deletedQueueReceiver.receiveMessages(50, { maxWaitTimeInMs: 10000 });
+					const messages = await deletedQueueReceiver.receiveMessages(50, { maxWaitTimeInMs: 3000 });
 					if (messages.length === 0) {
 						debug('There are no messages in this Dead Letter Queue');
 						messagesPending = false;
