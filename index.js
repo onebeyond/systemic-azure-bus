@@ -59,9 +59,9 @@ module.exports = () => {
 
 			const onMessageHandler = async brokeredMessage => {
 				const topicErrorStrategies = {
-					retry: errorStrategies.retry(topic),
-					deadLetter: errorStrategies.deadLetter(topic),
-					exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory),
+					retry: errorStrategies.retry(topic, receiver),
+					deadLetter: errorStrategies.deadLetter(topic, receiver),
+					exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory, receiver),
 				};
 				try {
 					enqueuedItems++;
