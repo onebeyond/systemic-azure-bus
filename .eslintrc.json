@@ -50,6 +50,7 @@
       {
         "requireForBlockBody": false
       }
-    ]
+    ],
+    "object-curly-newline": "off"
   }
 }

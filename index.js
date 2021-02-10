@@ -93,12 +93,12 @@ module.exports = () => {
 		const peekDlq = async (subscriptionId, messagesNumber = 1) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
+			// check access to dlq by topic and client
+			const dlqReceiver = topicClientFactory.createReceiver({ topic, subscription, isDlq: true });
 
-			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
-
-			const peekedMessages = await deletedQueueReceiver.receiveMessages(messagesNumber, { maxWaitTimeInMs: 10000 });
-			debug(`${peekedMessages.length} peeked messages from DLQ ${deletedQueueReceiver}`);
-			await deletedQueueReceiver.close();
+			const peekedMessages = await dlqReceiver.receiveMessages(messagesNumber, { maxWaitTimeInMs: 3000 });
+			debug(`${peekedMessages.length} peeked messages from DLQ ${dlqReceiver.entityPath}`);
+			await dlqReceiver.close();
 			return peekedMessages;
 		};
 
@@ -116,13 +116,13 @@ module.exports = () => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 
-			const deletedQueueReceiver = connection.createReceiver(topic, subscription);
+			const dlqReceiver = topicClientFactory.createReceiver({ topic, subscription, isDlq: true });
 
-			while ((messages = await deletedQueueReceiver.receiveMessages(1, { maxWaitTimeInMs: 10000 })) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
+			while ((messages = await dlqReceiver.receiveMessages(1, { maxWaitTimeInMs: 3000 })) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
 				debug('Processing message from DLQ');
 				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
 			}
-			await deletedQueueReceiver.close();
+			await dlqReceiver.close();
 		};
 
 		const emptyDlq = async subscriptionId => {
@@ -130,11 +130,11 @@ module.exports = () => {
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
 
 			try {
-				const deletedQueueReceiver = connection.createReceiver(topic, { receiveMode: 'receiveAndDelete' });
+				const dlqReceiver = topicClientFactory.createReceiver({ topic, subscription, mode: 'receiveAndDelete', isDlq: true });
 
 				let messagesPending = true;
 				const getMessagesFromDlq = async () => {
-					const messages = await deletedQueueReceiver.receiveMessages(50, { maxWaitTimeInMs: 3000 });
+					const messages = await dlqReceiver.receiveMessages(50, { maxWaitTimeInMs: 3000 });
 					if (messages.length === 0) {
 						debug('There are no messages in this Dead Letter Queue');
 						messagesPending = false;
@@ -148,7 +148,7 @@ module.exports = () => {
 				while (messagesPending) {
 					await getMessagesFromDlq();
 				}
-				await deletedQueueReceiver.close();
+				await dlqReceiver.close();
 			} catch (err) {
 				debug(`Error while deleting dead letter queue: ${err.message}`);
 				throw (err);
