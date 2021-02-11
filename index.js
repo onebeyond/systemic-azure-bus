@@ -68,7 +68,7 @@ module.exports = () => {
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
 					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.userProperties.contentEncoding), userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
-					await brokeredMessage.complete();
+					await receiver.completeMessage(brokeredMessage);
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
 					const errorStrategy = e.strategy || subscriptionErrorStrategy || 'retry';
