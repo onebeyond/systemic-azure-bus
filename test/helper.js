@@ -17,8 +17,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let bus;
 
 const purgeDlqBySubcriptionId = async subscriptionId => {
-	const accept = async message => {
-		await message.completeMessage();
+	const accept = async (message, receiver) => {
+		await receiver.completeMessage(message);
 		return Promise.resolve();
 	};
 	const deadBodies = await bus.peekDlq(subscriptionId);
@@ -47,7 +47,7 @@ const purgeBySubcriptionId = async (subscriptionId, n) => {
 				resolve();
 			}
 		};
-		const subscribe = () => bus.subscribe(console.error, console.log); // eslint-disable-line no-console
+		const subscribe = () => bus.subscribe(console.error); // eslint-disable-line no-console
 		subscribe()(subscriptionId, processMessage);
 	});
 	debug(`Peeked ${activeMessages.length} messages in subscriptionId ${subscriptionId}`);
@@ -59,7 +59,7 @@ const start = async ({ config }) => {
 	debug('Initialising service bus API...');
 	bus = await busApi.start({ config });
 	return {
-		safeSubscribe: bus.subscribe(console.error, console.log), // eslint-disable-line no-console
+		safeSubscribe: bus.subscribe(console.error), // eslint-disable-line no-console
 		publish: bus.publish,
 		peekDlq: bus.peekDlq,
 		peek: bus.peek,

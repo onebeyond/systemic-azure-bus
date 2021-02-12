@@ -3,7 +3,7 @@ const debug = require('debug')('systemic-azure-bus');
 const zlib = require('zlib');
 const { join } = require('path');
 const requireAll = require('require-all');
-const { ServiceBusClient } = require('@azure/service-bus');
+const { ServiceBusClient, ServiceBusAdministrationClient } = require('@azure/service-bus');
 
 const errorStrategies = requireAll(join(__dirname, 'lib', 'errorStrategies'));
 const factories = requireAll(join(__dirname, 'lib', 'clientFactories'));
@@ -17,7 +17,7 @@ const decodingStrategies = {
 const getBodyDecoded = (body, contentEncoding) => (decodingStrategies[contentEncoding] || decodingStrategies.default)(body);
 
 module.exports = () => {
-	let connection;
+	let sbClient;
 	let topicClientFactory;
 	let queueClientFactory;
 	let enqueuedItems = 0;
@@ -30,9 +30,9 @@ module.exports = () => {
 			publications,
 		},
 	}) => {
-		connection = new ServiceBusClient(connectionString);
-		topicClientFactory = factories.topics(connection);
-		queueClientFactory = factories.queue(connection);
+		sbClient = new ServiceBusClient(connectionString);
+		topicClientFactory = factories.topics(sbClient);
+		queueClientFactory = factories.queue(sbClient);
 
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
@@ -45,29 +45,33 @@ module.exports = () => {
 			return topicApi.publish(sender);
 		};
 
-		const getProperties = message => ({
-			entity: message._context.entityPath,
-			messageId: message.messageId,
-			contentType: message._amqpMessage.content_type,
-		});
-
+		// JGL => access to this parts of message breaks app
+		/* const getProperties = message => {
+			const res = {
+				entity: message._context.entityPath,
+				messageId: message.messageId,
+				contentType: message._amqpMessage.content_type,
+			};
+			return res;
+		}; */
 
 		const subscribe = onError => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const receiver = topicClientFactory.createReceiver(topic, subscription);
+			const receiver = topicClientFactory.createReceiver({ topic, subscription });
+			const topicErrorStrategies = {
+				retry: errorStrategies.retry(topic, receiver),
+				deadLetter: errorStrategies.deadLetter(topic, receiver),
+				exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory, receiver),
+			};
 
 			const onMessageHandler = async brokeredMessage => {
-				const topicErrorStrategies = {
-					retry: errorStrategies.retry(topic, receiver),
-					deadLetter: errorStrategies.deadLetter(topic, receiver),
-					exponentialBackoff: errorStrategies.exponentialBackoff(topic, topicClientFactory, receiver),
-				};
 				try {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.userProperties.contentEncoding), userProperties: brokeredMessage.userProperties, properties: getProperties(brokeredMessage) });
+					// JGL:  properties: getProperties(brokeredMessage) => breaks
+					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.applicationProperties.contentEncoding), userProperties: brokeredMessage.applicationProperties });
 					await receiver.completeMessage(brokeredMessage);
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;
@@ -83,10 +87,11 @@ module.exports = () => {
 
 
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
-			// receiver.registerMessageHandler(onMessageHandler, onError, { autoComplete: false });
 			receiver.subscribe({
 				processMessage: onMessageHandler,
-				processError: onError,
+				processError: async args => {
+					onError(args.error);
+				},
 			}, { autoCompleteMessages: false });
 		};
 
@@ -105,10 +110,10 @@ module.exports = () => {
 		const peek = async (subscriptionId, messagesNumber = 1) => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const queueReceiver = queueClientFactory.createReceiver(subscriptionId);
-			const activeMessages = await queueReceiver.peekMessages(messagesNumber);
+			const topicReceiver = topicClientFactory.createReceiver({ topic, subscription });
+			const activeMessages = await topicReceiver.peekMessages(messagesNumber);
 			debug(`${activeMessages.length} peeked messages from Active Queue`);
-			await queueReceiver.close();
+			await topicReceiver.close();
 			return activeMessages;
 		};
 
@@ -120,7 +125,7 @@ module.exports = () => {
 
 			while ((messages = await dlqReceiver.receiveMessages(1, { maxWaitTimeInMs: 3000 })) && messages.length > 0) { // eslint-disable-line no-undef, no-cond-assign, no-await-in-loop
 				debug('Processing message from DLQ');
-				await handler(messages[0]); // eslint-disable-line no-undef, no-await-in-loop
+				await handler(messages[0], dlqReceiver); // eslint-disable-line no-undef, no-await-in-loop
 			}
 			await dlqReceiver.close();
 		};
@@ -158,8 +163,8 @@ module.exports = () => {
 		const getSubscriptionRules = async subscriptionId => {
 			const { topic, subscription } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
-			const client = connection.createSubscriptionClient(topic, subscription);
-			const rules = await client.getRules();
+			const adminClient = new ServiceBusAdministrationClient(connectionString);
+			const rules = await adminClient.getRules();
 			return rules;
 		};
 
@@ -167,11 +172,11 @@ module.exports = () => {
 			const subscriptionNames = Object.keys(subscriptions);
 			const getConfigTopic = name => subscriptions[name].topic;
 			const getConfigSubscription = name => subscriptions[name].subscription;
-			const createClient = name => connection.createSubscriptionClient(getConfigTopic(name), getConfigSubscription(name));
+			const createClient = name => topicClientFactory.createReceiver({ topic: getConfigTopic(name), subscription: getConfigSubscription(name) });
 			let healthCheck;
 			try {
 				const clients = subscriptionNames.map(createClient);
-				const healthchecks = clients.map(c => c.peek());
+				const healthchecks = clients.map(c => c.peekMessages(1));
 				await Promise.all(healthchecks);
 				await Promise.all(clients.map(c => c.close()));
 				healthCheck = {
@@ -202,7 +207,7 @@ module.exports = () => {
 		await topicClientFactory.stop();
 		await queueClientFactory.stop();
 		debug('Stopping service bus connection...');
-		await connection.close();
+		await sbClient.close();
 		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
 			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
 			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
