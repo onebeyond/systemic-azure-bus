@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload } = require('../helper');
+const { bus, createPayload, schedule } = require('../helper');
 
 const assessTopic = 'stress.test';
 
@@ -26,14 +26,17 @@ describe('Health check', () => {
 			},
 		};
 
-		beforeEach(async () => {
+		before(async () => {
 			busApi = await bus.start({ config });
 			await busApi.purgeDlqBySubcriptionId('assess');
 		});
 
+		after(async () => {
+			await bus.stop();
+		});
+
 		afterEach(async () => {
 			await busApi.purgeDlqBySubcriptionId('assess');
-			await bus.stop();
 		});
 
 		// eslint-disable-next-line no-unused-vars
@@ -41,18 +44,19 @@ describe('Health check', () => {
 			// should put a message in the topic
 			const publish = busApi.publish('fire');
 
-			const handler = async () => {
+			const dlqMessages = async () => {
 				const deadBodies = await busApi.peekDlq('assess');
-				expect(deadBodies.length).to.equal(0);
+				expect(deadBodies.length).to.equal(1);
 				resolve();
 			};
 
-			await busApi.safeSubscribe('assess', handler);
+			await busApi.safeSubscribe('assess');
 
 			const payload = createPayload();
 			await publish(payload);
 			const res = await busApi.health();
 			expect(res.status).to.eql('ok');
+			schedule(dlqMessages);
 		}));
 
 		it('returns ok always the subscription is reachable/doesnt have any message', async () => {

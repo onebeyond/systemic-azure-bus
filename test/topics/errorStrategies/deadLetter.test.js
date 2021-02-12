@@ -28,14 +28,17 @@ const config = {
 describe('Topics - Dead Letter error strategy', () => {
 	let busApi;
 
-	beforeEach(async () => {
+	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assessWithDlq');
 	});
 
+	after(async () => {
+		await bus.stop();
+	});
+
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assessWithDlq');
-		await bus.stop();
 	});
 
 	it('sends a message straight to DLQ', () => new Promise(async resolve => {

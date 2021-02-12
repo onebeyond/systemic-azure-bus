@@ -28,13 +28,17 @@ const config = {
 describe('Topics - Systemic Azure Bus API', () => {
 	let busApi;
 
-	beforeEach(async () => {
+	before(async () => {
 		busApi = await bus.start({ config });
-		await busApi.purgeBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('assess');
 	});
 
+
 	afterEach(async () => {
-		await busApi.purgeBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('assess');
+	});
+
+	after(async () => {
 		await bus.stop();
 	});
 
