@@ -44,16 +44,12 @@ module.exports = () => {
 			}
 			return topicApi.publish(sender);
 		};
-
-		// JGL => access to this parts of message breaks app
-		/* const getProperties = message => {
-			const res = {
-				entity: message._context.entityPath,
+		const getProperties = message => {
+			const properties = {
 				messageId: message.messageId,
-				contentType: message._amqpMessage.content_type,
 			};
-			return res;
-		}; */
+			return properties;
+		};
 
 		const subscribe = onError => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
@@ -70,8 +66,7 @@ module.exports = () => {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					// JGL:  properties: getProperties(brokeredMessage) => breaks
-					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.applicationProperties.contentEncoding), userProperties: brokeredMessage.applicationProperties });
+					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.applicationProperties.contentEncoding), userProperties: brokeredMessage.applicationProperties, properties: getProperties(brokeredMessage) });
 					await receiver.completeMessage(brokeredMessage);
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;

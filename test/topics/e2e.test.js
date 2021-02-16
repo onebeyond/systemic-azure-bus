@@ -58,14 +58,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 		const publish = busApi.publish('fire');
 
 		const handler = async msg => {
-			// JGL => TODO: populate properties almost with messageId
-			// expect(msg).to.have.keys('body', 'properties', 'userProperties');
-			expect(msg).to.have.keys('body', 'userProperties');
+			expect(msg).to.have.keys('body', 'properties', 'userProperties');
 
-			const { body, userProperties } = msg;
+			const { body, userProperties, properties } = msg;
 			expect(userProperties).to.be.an('object');
 			expect(body).to.be.eql(payload);
-			// expect(properties.messageId).to.be.eql(messageId);
+			expect(properties.messageId).to.be.eql(messageId);
 			resolve();
 		};
 
