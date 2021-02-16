@@ -29,8 +29,7 @@ const config = {
 	},
 };
 
-// JGL: pending to research and fix
-describe.skip('Topics - Exponential Backoff error strategy', () => {
+describe('Topics - Exponential Backoff error strategy', () => {
 	let busApi;
 
 	beforeEach(async () => {
@@ -60,8 +59,8 @@ describe.skip('Topics - Exponential Backoff error strategy', () => {
 		const expBackoffConfig = config.subscriptions[testedSubscription];
 		const maxAttempts = expBackoffConfig.errorHandling.options.attempts;
 
-		const handler = async ({ userProperties }) => {
-			expect(userProperties.attemptCount).to.equal(received);
+		const handler = async ({ applicationProperties }) => {
+			expect(applicationProperties.attemptCount).to.equal(received);
 			received++;
 			if (received === maxAttempts) {
 				schedule(confirmDeath);
