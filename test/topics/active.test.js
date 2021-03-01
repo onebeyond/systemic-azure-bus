@@ -31,14 +31,15 @@ describe('Topics - Systemic Azure Bus API', () => {
 	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assess');
+		await bus.stop();
 	});
 
+	beforeEach(async () => {
+		busApi = await bus.start({ config });
+	});
 
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assess');
-	});
-
-	after(async () => {
 		await bus.stop();
 	});
 

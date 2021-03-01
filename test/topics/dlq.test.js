@@ -31,13 +31,15 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assess');
+		await bus.stop();
+	});
+
+	beforeEach(async () => {
+		busApi = await bus.start({ config });
 	});
 
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assess');
-	});
-
-	after(async () => {
 		await bus.stop();
 	});
 
@@ -72,7 +74,7 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 	}));
 
 	// JGL - with this test, retry suite fails U_u
-	it.skip('DLQ empty - should empty DLQ after publish a bunch of messages and send them to DLQ', async () => {
+	it('DLQ empty - should empty DLQ after publish a bunch of messages and send them to DLQ', async () => {
 		const BULLETS = 20;
 		const publishFire = busApi.publish('fire');
 
@@ -86,9 +88,15 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 		await attack(BULLETS, publishFire);
 		await sleep(4000); // needed for correct peek
 		const messagesInDlq = await busApi.peekDlq('assess', BULLETS);
+
 		expect(messagesInDlq.length).to.be(BULLETS);
 
+		await sleep(4000); // needed for correct peek
+
 		await busApi.emptyDlq('assess');
+
+		await sleep(4000); // needed for correct peek
+
 		const messagesInDlqAfterEmptying = await busApi.peekDlq('assess', BULLETS);
 
 		expect(messagesInDlqAfterEmptying.length).to.be(0);

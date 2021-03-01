@@ -39,10 +39,15 @@ const config = {
 describe('Topics - Systemic Azure Bus API', () => {
 	let busApi;
 
-	beforeEach(async () => {
+	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assess');
 		await busApi.purgeDlqBySubcriptionId('duplicates');
+		await bus.stop();
+	});
+
+	beforeEach(async () => {
+		busApi = await bus.start({ config });
 	});
 
 	afterEach(async () => {
@@ -50,7 +55,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await busApi.purgeDlqBySubcriptionId('duplicates');
 		await bus.stop();
 	});
-
 
 	it('publish a message with explicit messageId and check structure on receiving', () => new Promise(async resolve => {
 		const payload = createPayload();
@@ -72,7 +76,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 	}));
 
 	// JGL => fails when global pass, but not only this suite
-	it.skip('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
+	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 10;
 		const publishFire = busApi.publish('fire');
 

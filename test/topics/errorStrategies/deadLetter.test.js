@@ -1,6 +1,6 @@
 require('dotenv').config();
 const expect = require('expect.js');
-const { bus, createPayload, schedule } = require('../../helper');
+const { bus, createPayload, schedule, sleep } = require('../../helper');
 
 const stressTopic = 'stress.test';
 
@@ -26,20 +26,22 @@ const config = {
 };
 
 // TODO: Have a look at this together. I Had to skip these because they sometimes work and sometimes don't ¯\_(ツ)_/¯
-describe.skip('Topics - Dead Letter error strategy', () => {
+describe('Topics - Dead Letter error strategy', () => {
 	let busApi;
 
 	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assessWithDlq');
+		await bus.stop();
 	});
 
-	after(async () => {
-		await bus.stop();
+	beforeEach(async () => {
+		busApi = await bus.start({ config });
 	});
 
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assessWithDlq');
+		await bus.stop();
 	});
 
 	it('sends a message straight to DLQ', () => new Promise(async resolve => {
@@ -51,6 +53,7 @@ describe.skip('Topics - Dead Letter error strategy', () => {
 		const confirmDeath = async () => {
 			const deadBodies = await busApi.peekDlq('assessWithDlq');
 			expect(deadBodies.length).to.equal(1);
+			await sleep(4000); // needed for correct peek
 			resolve();
 		};
 

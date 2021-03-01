@@ -8,7 +8,8 @@ const enoughTime = 500;
 const schedule = fn => setTimeout(fn, enoughTime);
 const createPayload = () => ({ foo: Date.now() });
 const attack = async (amount, publishFire) => {
-	await publishFire(createPayload());
+	const payload = createPayload();
+	await publishFire(payload);
 	--amount; // eslint-disable-line no-param-reassign
 	amount && attack(amount, publishFire); // eslint-disable-line no-unused-expressions
 };
@@ -21,9 +22,6 @@ const purgeDlqBySubcriptionId = async subscriptionId => {
 		await receiver.completeMessage(message);
 		return Promise.resolve();
 	};
-	const deadBodies = await bus.peekDlq(subscriptionId);
-	debug(`Peeked ${deadBodies.length} messages in DLQ of ${subscriptionId}`);
-	if (deadBodies.length === 0) return;
 	await bus.processDlq(subscriptionId, accept);
 };
 

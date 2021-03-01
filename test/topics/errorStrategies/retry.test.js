@@ -28,13 +28,20 @@ const config = {
 describe('Topics - Retry error strategy', () => {
 	let busApi;
 
-	beforeEach(async () => {
+	before(async () => {
 		busApi = await bus.start({ config });
 		await busApi.purgeDlqBySubcriptionId('assessWithRetry');
+		await busApi.purgeBySubcriptionId('assessWithRetry');
+		await bus.stop();
+	});
+
+	beforeEach(async () => {
+		busApi = await bus.start({ config });
 	});
 
 	afterEach(async () => {
 		await busApi.purgeDlqBySubcriptionId('assessWithRetry');
+		await busApi.purgeBySubcriptionId('assessWithRetry');
 		await bus.stop();
 	});
 
