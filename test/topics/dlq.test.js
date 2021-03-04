@@ -86,16 +86,16 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 
 		busApi.safeSubscribe('assess', handler);
 		await attack(BULLETS, publishFire);
-		await sleep(6000); // needed for correct peek
+		await sleep(8000); // needed for correct peek
 		const messagesInDlq = await busApi.peekDlq('assess', BULLETS);
 
 		expect(messagesInDlq.length).to.be(BULLETS);
 
-		await sleep(6000); // needed for correct peek
+		await sleep(8000); // needed for correct peek
 
 		await busApi.emptyDlq('assess');
 
-		await sleep(6000); // needed for correct peek
+		await sleep(8000); // needed for correct peek
 
 		const messagesInDlqAfterEmptying = await busApi.peekDlq('assess', BULLETS);
 
