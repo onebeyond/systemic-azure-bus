@@ -16,7 +16,7 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@azure/service-bus": "^7.0.0",
+    "@azure/service-bus": "^7.0.3",
     "crypto": "^1.0.1",
     "debug": "^4.1.1",
     "moment": "^2.24.0",
