@@ -81,14 +81,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 		let received = 0;
 		const handler = async msg => {
-			console.log(msg);
 			received++;
 			// expect(msg.properties.messageId.length).to.be.greaterThan(10);
 			expect(msg).not.empty();
 
 			if (received === BULLETS) {
 				const deadBodies = await busApi.peekDlq('assess');
-				console.log(deadBodies.length);
 				expect(deadBodies.length).to.equal(0);
 				resolve();
 			}
