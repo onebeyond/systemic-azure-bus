@@ -57,7 +57,6 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 			expect(firstMessage.length).to.be(1);
 			const moreMessages = await busApi.peekDlq('assess', 1);
 			expect(moreMessages.length).to.be(1);
-			// JGL - no sense. It seems to work fine now
 			// expect(moreMessages[0].messageId).to.be.eql(firstMessage[0].messageId); // Best approach to test: Second message recovered is equals to first, then its the same (service bus is not working as expected)
 			resolve();
 		};
@@ -73,7 +72,6 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 		schedule(peekDlq);
 	}));
 
-	// JGL - with this test, retry suite fails U_u
 	it('DLQ empty - should empty DLQ after publish a bunch of messages and send them to DLQ', async () => {
 		const BULLETS = 20;
 		const publishFire = busApi.publish('fire');
@@ -102,7 +100,6 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 		expect(messagesInDlqAfterEmptying.length).to.be(0);
 	});
 
-	// JGL - not migrated. Already skiped in master
 	it.skip('publishes lots of messages, sends them to DLQ and receives them all in DLQ', () => new Promise(async resolve => {
 		const BULLETS = 10;
 		const publishFire = busApi.publish('fire');
