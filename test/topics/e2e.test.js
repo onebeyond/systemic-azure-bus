@@ -75,19 +75,20 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await publish(payload, { messageId });
 	}));
 
-	// JGL => fails when global pass, but not only this suite
 	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 10;
 		const publishFire = busApi.publish('fire');
 
 		let received = 0;
 		const handler = async msg => {
+			console.log(msg);
 			received++;
 			// expect(msg.properties.messageId.length).to.be.greaterThan(10);
 			expect(msg).not.empty();
 
 			if (received === BULLETS) {
 				const deadBodies = await busApi.peekDlq('assess');
+				console.log(deadBodies.length);
 				expect(deadBodies.length).to.equal(0);
 				resolve();
 			}
