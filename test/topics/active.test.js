@@ -28,13 +28,18 @@ const config = {
 describe('Topics - Systemic Azure Bus API', () => {
 	let busApi;
 
+	before(async () => {
+		busApi = await bus.start({ config });
+		await busApi.purgeDlqBySubcriptionId('assess');
+		await bus.stop();
+	});
+
 	beforeEach(async () => {
 		busApi = await bus.start({ config });
-		await busApi.purgeBySubcriptionId('assess');
 	});
 
 	afterEach(async () => {
-		await busApi.purgeBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('assess');
 		await bus.stop();
 	});
 
@@ -43,7 +48,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 		expect(messages.length).to.be(0);
 	});
 
-	it('Active peek - should contain three message', () => new Promise(async resolve => {
+	it('Active peek - should contain three messages', () => new Promise(async resolve => {
 		const BULLETS = 3;
 		const publishFire = busApi.publish('fire');
 
