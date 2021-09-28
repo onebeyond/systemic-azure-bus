@@ -75,6 +75,37 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await publish(payload, { messageId });
 	}));
 
+	it('publish a message with explicit messageId and check structure on receiving if the "subscriptionName" is the one',
+		() => new Promise(async resolve => {
+			const payload = { ...createPayload(), applicationProperties: { subscriptionName: 'mocha-test' } };
+			const messageId = '8734258619';
+			const publish = busApi.publish('fire');
+
+			const handler = async msg => {
+				process.env.SUBSCRIPTION_FILTERED = true;
+				expect(msg.properties.messageId).to.be.eql(messageId);
+			};
+
+			busApi.safeSubscribe('assess', handler);
+			await publish(payload, { messageId });
+			expect(process.env.SUBSCRIPTION_FILTERED).to.be.eql(undefined);
+			await publish({
+				...payload,
+				applicationProperties: {
+					subscriptionName: `${stressTopic}.assess`,
+				},
+			}, { messageId });
+			// DLQ should be empty
+			const messagesInDlq = await busApi.peekDlq('assess', 10);
+			expect(messagesInDlq.length).to.be(0);
+			// Not active messages should exists
+			const messagesActive = await busApi.peek('assess', 10);
+			expect(messagesActive.length).to.be(0);
+			// After the last publish with the right 'subscriptionName' property value the hander should be done
+			expect(process.env.SUBSCRIPTION_FILTERED).to.be.eql('true');
+			resolve();
+		}));
+
 	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 10;
 		const publishFire = busApi.publish('fire');
