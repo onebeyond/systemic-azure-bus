@@ -80,7 +80,7 @@ module.exports = () => {
 						await handler({
 							body: getBodyDecoded(
 								brokeredMessage.body,
-								brokeredMessage.applicationProperties.contentEncoding,
+								applicationProperties.contentEncoding,
 							),
 							applicationProperties,
 							properties: getProperties(brokeredMessage),
