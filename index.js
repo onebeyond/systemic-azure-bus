@@ -66,7 +66,26 @@ module.exports = () => {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					await handler({ body: getBodyDecoded(brokeredMessage.body, brokeredMessage.applicationProperties.contentEncoding), applicationProperties: brokeredMessage.applicationProperties, properties: getProperties(brokeredMessage) });
+					const { applicationProperties } = brokeredMessage;
+					const { subscriptionName } = applicationProperties;
+
+					if (!subscriptionName || subscriptionId === subscriptionName) {
+						/**
+						 * The handler is only going to run if the "subscriptionName" property
+						 * does not exists. Or if it exists and is the current subscription from all
+						 * the different ones that the topic can contain.
+						 * But the message confirmation operation will always be done, even if the handler
+						 * is not executed because of the comment above.
+						 */
+						await handler({
+							body: getBodyDecoded(
+								brokeredMessage.body,
+								brokeredMessage.applicationProperties.contentEncoding,
+							),
+							applicationProperties,
+							properties: getProperties(brokeredMessage),
+						});
+					}
 					await receiver.completeMessage(brokeredMessage);
 				} catch (e) {
 					const subscriptionErrorStrategy = (errorHandling || {}).strategy;

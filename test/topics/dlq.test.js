@@ -89,11 +89,7 @@ describe('Topics - Systemic Azure Bus API - DLQ', () => {
 
 		expect(messagesInDlq.length).to.be(BULLETS);
 
-		await sleep(8000); // needed for correct peek
-
 		await busApi.emptyDlq('assess');
-
-		await sleep(8000); // needed for correct peek
 
 		const messagesInDlqAfterEmptying = await busApi.peekDlq('assess', BULLETS);
 
