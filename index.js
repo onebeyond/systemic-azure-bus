@@ -67,11 +67,11 @@ module.exports = () => {
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
 					const { applicationProperties } = brokeredMessage;
-					const { subscriptionName } = applicationProperties;
+					const { subscriptionName: messageSubscription } = applicationProperties;
 
-					if (!subscriptionName || subscriptionId === subscriptionName) {
+					if (!messageSubscription || subscription === messageSubscription) {
 						/**
-						 * The handler is only going to run if the "subscriptionName" property
+						 * The handler is only going to run if the "messageSubscription" property
 						 * does not exists. Or if it exists and is the current subscription from all
 						 * the different ones that the topic can contain.
 						 * But the message confirmation operation will always be done, even if the handler
