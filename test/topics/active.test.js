@@ -11,7 +11,7 @@ const config = {
 	subscriptions: {
 		assess: {
 			topic: stressTopic,
-			subscription: `${stressTopic}.assess`,
+			subscription: 'assess',
 			errorHandling: {
 				strategy: 'retry',
 			},

@@ -11,7 +11,7 @@ const config = {
 	subscriptions: {
 		assess: {
 			topic: stressTopic,
-			subscription: `${stressTopic}.assess`,
+			subscription: 'assess',
 			errorHandling: {
 				strategy: 'retry',
 			},
@@ -75,6 +75,27 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await publish(payload, { messageId });
 	}));
 
+	it('publish a message with explicit messageId and check scheduler on receiving', () => new Promise(async resolve => {
+		const payload = createPayload();
+		const messageId = '1234567890';
+		const publish = busApi.publish('fire');
+		// eslint-disable-next-line no-unused-vars
+		let startTimestamp;
+
+		const handler = _messageId => async msg => {
+			const { properties } = msg;
+			if (!properties.messageId || +properties.messageId !== _messageId) return;
+			expect((Date.now() - startTimestamp) / 1000).to.be.greaterThan(5);
+			expect(msg).to.have.keys('body', 'properties', 'applicationProperties');
+			resolve();
+		};
+		busApi.safeSubscribe('assess', handler(+messageId));
+		const scheduledEnqueueTimeUtc = new Date(Date.now() + 5000);
+		// eslint-disable-next-line prefer-const
+		startTimestamp = Date.now();
+		await publish(payload, { messageId, scheduledEnqueueTimeUtc });
+	}));
+
 	it('publish a message with explicit messageId and check structure on receiving if the "subscriptionName" is the one',
 		() => new Promise(async resolve => {
 			const payload = createPayload();
@@ -89,7 +110,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 			const handler = async ({ properties, applicationProperties }) => {
 				process.env.HANDLER_EXPECTS_EXECUTED = true;
-				expect(applicationProperties.subscriptionName).to.be.eql(`${stressTopic}.assess`);
+				expect(applicationProperties.subscriptionName).to.be.eql('assess');
 				expect(properties.messageId).to.be.eql(messageId);
 			};
 			busApi.safeSubscribe('assess', handler);
@@ -107,7 +128,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 			await publish(payload, {
 				messageId,
 				applicationProperties: {
-					subscriptionName: `${stressTopic}.assess`,
+					subscriptionName: 'assess',
 				},
 			});
 			await sleep(2000);
