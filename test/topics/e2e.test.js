@@ -41,8 +41,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 	before(async () => {
 		busApi = await bus.start({ config });
-		await busApi.purgeBySubcriptionId('assess');
-		await busApi.purgeBySubcriptionId('duplicates');
 		await busApi.purgeDlqBySubcriptionId('assess');
 		await busApi.purgeDlqBySubcriptionId('duplicates');
 		await bus.stop();
@@ -84,12 +82,14 @@ describe('Topics - Systemic Azure Bus API', () => {
 		// eslint-disable-next-line no-unused-vars
 		let startTimestamp;
 
-		const handler = async msg => {
+		const handler = _messageId => async msg => {
+			const { properties } = msg;
+			if (!properties.messageId || +properties.messageId !== _messageId) return;
 			expect((Date.now() - startTimestamp) / 1000).to.be.greaterThan(5);
 			expect(msg).to.have.keys('body', 'properties', 'applicationProperties');
 			resolve();
 		};
-		busApi.safeSubscribe('assess', handler);
+		busApi.safeSubscribe('assess', handler(+messageId));
 		const scheduledEnqueueTimeUtc = new Date(Date.now() + 5000);
 		// eslint-disable-next-line prefer-const
 		startTimestamp = Date.now();
