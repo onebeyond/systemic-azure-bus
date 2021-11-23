@@ -15,7 +15,7 @@ describe('Health check', () => {
 			subscriptions: {
 				assess: {
 					topic: assessTopic,
-					subscription: `${assessTopic}.assess`,
+					subscription: 'assess',
 				},
 			},
 			publications: {
@@ -29,10 +29,11 @@ describe('Health check', () => {
 		before(async () => {
 			busApi = await bus.start({ config });
 			await busApi.purgeDlqBySubcriptionId('assess');
+			await bus.stop();
 		});
 
-		after(async () => {
-			await bus.stop();
+		beforeEach(async () => {
+			busApi = await bus.start({ config });
 		});
 
 		afterEach(async () => {

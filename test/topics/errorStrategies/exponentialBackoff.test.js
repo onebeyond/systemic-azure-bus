@@ -11,7 +11,7 @@ const config = {
 	subscriptions: {
 		assessExponentialBackoff: {
 			topic: stressTopic,
-			subscription: `${stressTopic}.assess`,
+			subscription: 'assess',
 			errorHandling: {
 				strategy: 'exponentialBackoff',
 				options: {
