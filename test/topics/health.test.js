@@ -38,6 +38,7 @@ describe('Health check', () => {
 
 		afterEach(async () => {
 			await busApi.purgeDlqBySubcriptionId('assess');
+			await bus.stop();
 		});
 
 		// eslint-disable-next-line no-unused-vars
