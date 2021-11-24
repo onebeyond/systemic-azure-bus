@@ -1,3 +1,6 @@
+[![CI](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/ci.yml/badge.svg)](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/ci.yml)
+[![CD](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/cd.yml/badge.svg)](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/cd.yml)
+
 # systemic-azure-bus
 
 Systemic Azure Bus is a [systemic component](https://github.com/guidesmiths/systemic) for the [Azure Service Bus SDK](https://github.com/Azure/azure-sdk-for-js). Its goal is to help you deal with azure bus topics and queues subscriptions and publications.
