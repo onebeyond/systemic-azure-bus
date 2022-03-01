@@ -22,6 +22,7 @@ module.exports = () => {
 	let queueClientFactory;
 	let enqueuedItems = 0;
 	const sendersByPublication = [];
+	const openSubscriptions = [];
 
 	const start = async ({
 		config: {
@@ -101,12 +102,13 @@ module.exports = () => {
 
 
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
-			receiver.subscribe({
+			const openSubscription = receiver.subscribe({
 				processMessage: onMessageHandler,
 				processError: async args => {
 					onError(args.error);
 				},
 			}, { autoCompleteMessages: false });
+			openSubscriptions.push(openSubscription);
 		};
 
 		const peekDlq = async (subscriptionId, messagesNumber = 1) => {
@@ -217,17 +219,36 @@ module.exports = () => {
 		};
 	};
 
+	const drainOpenSubscriptions = async () => {
+		let i = openSubscriptions.length;
+		while (i--) {
+			debug('Closing active subscription');
+			await openSubscriptions[i].close();
+			openSubscriptions.splice(i, 1);
+		}
+	};
+
 	const stop = async () => {
-		await topicClientFactory.stop();
-		await queueClientFactory.stop();
-		debug('Stopping service bus connection...');
-		await sbClient.close();
-		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
+		debug('Closing open stream subscriptions and draining...');
+		await drainOpenSubscriptions();
+
+		let timer;
+		// eslint-disable-next-line no-return-assign
+		const checkIfSubscriptionIsEmpty = () => new Promise(resolve => timer = setInterval(async () => {
 			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
-			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
+			// eslint-disable-next-line no-unused-expressions
+			enqueuedItems === 0 && resolve();
 		}, 100));
-		await checkifSubscriptionIsEmpty();
+		await checkIfSubscriptionIsEmpty();
+		clearInterval(timer);
 		sendersByPublication.length = 0;
+
+		debug('Closing topic client factory...');
+		await topicClientFactory.stop();
+		debug('Closing queue client factory...');
+		await queueClientFactory.stop();
+		debug('Closing ServiceBusClient connection...');
+		await sbClient.close();
 	};
 
 	return { start, stop };
