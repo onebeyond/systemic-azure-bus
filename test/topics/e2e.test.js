@@ -48,6 +48,8 @@ describe('Topics - Systemic Azure Bus API', () => {
 
 	beforeEach(async () => {
 		busApi = await bus.start({ config });
+		await busApi.purgeDlqBySubcriptionId('assess');
+		await busApi.purgeDlqBySubcriptionId('duplicates');
 	});
 
 	afterEach(async () => {
