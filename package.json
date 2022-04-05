@@ -19,7 +19,7 @@
     "@azure/service-bus": "^7.0.3",
     "crypto": "^1.0.1",
     "debug": "^4.1.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "request-promise-native": "^1.0.5",
     "require-all": "^3.0.0",
     "utf8": "^3.0.0"
