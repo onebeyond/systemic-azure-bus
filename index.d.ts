@@ -1,5 +1,5 @@
 import { Component } from 'systemic'
-import { ServiceBusReceivedMessage } from '@azure/service-bus'
+import { ServiceBusMessage, ServiceBusReceivedMessage } from '@azure/service-bus'
 
 /**
  * Configuration for the Systemic Azure Service Bus Component
@@ -20,7 +20,7 @@ export type PublicationBus<TPublications> = {
    */
   publish: <TTopic extends keyof TPublications>(
     publicationName: TTopic,
-  ) => (message: TPublications[TTopic]) => Promise<void>
+  ) => (message: TPublications[TTopic], options?: Omit<ServiceBusMessage, 'body'> & { label?: string, contentEncoding?: 'zlib' | 'default' }) => Promise<void>
 }
 
 export type SubscriptionBus<TSubstriptions> = {
@@ -32,13 +32,13 @@ export type SubscriptionBus<TSubstriptions> = {
   subscribe: (
     onProcessError: (error: Error) => void,
   ) => <TTopic extends keyof TSubstriptions>(
-    subscriptionName: TTopic,
-    handler: (message: {
-      body: TSubstriptions[TTopic]
-      applicationProperties: ServiceBusReceivedMessage['applicationProperties']
-      properties: Pick<ServiceBusReceivedMessage, 'messageId'>
-    }) => Promise<void> | void,
-  ) => void
+      subscriptionName: TTopic,
+      handler: (message: {
+        body: TSubstriptions[TTopic]
+        applicationProperties: ServiceBusReceivedMessage['applicationProperties']
+        properties: Omit<ServiceBusReceivedMessage, 'body' | 'applicationProperties'>
+      }) => Promise<void> | void,
+    ) => void
 }
 
 /**
@@ -48,6 +48,6 @@ export type SubscriptionBus<TSubstriptions> = {
 declare function initBus<
   TPublications extends Record<string, unknown> = Record<string, unknown>,
   TSubstriptions extends Record<string, unknown> = Record<string, unknown>,
->(): Component<Bus<TPublications, TSubstriptions>, { config: Config<TPublications, TSubstriptions> }>
+  >(): Component<Bus<TPublications, TSubstriptions>, { config: Config<TPublications, TSubstriptions> }>
 
 export default initBus

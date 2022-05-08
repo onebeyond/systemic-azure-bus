@@ -21,7 +21,7 @@ module.exports = () => {
 	let topicClientFactory;
 	let queueClientFactory;
 	let enqueuedItems = 0;
-	const sendersByPublication = [];
+	const sendersByPublication = {};
 
 	const start = async ({
 		config: {
@@ -37,18 +37,12 @@ module.exports = () => {
 		const publish = publicationId => {
 			const { topic } = publications[publicationId] || {};
 			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
-			let { sender } = sendersByPublication.find(senderByPub => senderByPub.publicationId === publicationId) || {};
+			let sender = sendersByPublication[publicationId];
 			if (!sender) {
 				sender = topicClientFactory.createSender(topic);
-				sendersByPublication.push({ publicationId, sender });
+				sendersByPublication[publicationId] = sender;
 			}
 			return topicApi.publish(sender);
-		};
-		const getProperties = message => {
-			const properties = {
-				messageId: message.messageId,
-			};
-			return properties;
 		};
 
 		const subscribe = onError => (subscriptionId, handler) => {
@@ -66,7 +60,7 @@ module.exports = () => {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					const { applicationProperties } = brokeredMessage;
+					const { body, applicationProperties, ...properties } = brokeredMessage;
 					const { subscriptionName: messageSubscription } = applicationProperties;
 
 					if (!messageSubscription || subscription === messageSubscription) {
@@ -79,11 +73,11 @@ module.exports = () => {
 						 */
 						await handler({
 							body: getBodyDecoded(
-								brokeredMessage.body,
+								body,
 								applicationProperties.contentEncoding,
 							),
 							applicationProperties,
-							properties: getProperties(brokeredMessage),
+							properties,
 						});
 					}
 					await receiver.completeMessage(brokeredMessage);
