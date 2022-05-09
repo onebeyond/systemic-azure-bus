@@ -1,3 +1,6 @@
+const zlib = require('zlib');
+const expect = require('expect.js');
+
 const publish = require('../../lib/operations/topics/publish');
 
 const createPayload = () => ({ foo: Date.now() });
@@ -44,4 +47,22 @@ describe('Publish  message on Topic', () => {
 			resolve();
 		}
 	}));
+
+	it('Should send all message fields', async () => {
+		let received = null;
+		const sender = {
+			sendMessages: (message) => { received = message }
+		};
+
+		const body = createPayload();
+		const endcodedBody = zlib.deflateSync(Buffer.from(JSON.stringify(body))).toString();
+		const options = { contentEncoding: 'zlib', applicationProperties: { bar: 'baz' }, correlationId: '123abc' };
+		const publishMessage = publish(sender);
+
+		await publishMessage(body, options);
+
+		expect(received.applicationProperties).to.eql({ contentEncoding: 'zlib', attemptCount: 0, bar: 'baz', });
+		expect(received.correlationId).to.equal(options.correlationId);
+		expect(received.body.toString()).to.equal(endcodedBody);
+	});
 });
