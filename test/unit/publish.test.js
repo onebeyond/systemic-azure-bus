@@ -51,7 +51,7 @@ describe('Publish  message on Topic', () => {
 	it('Should send all message fields', async () => {
 		let received = null;
 		const sender = {
-			sendMessages: (message) => { received = message }
+			sendMessages: message => { received = message; },
 		};
 
 		const body = createPayload();
@@ -61,7 +61,7 @@ describe('Publish  message on Topic', () => {
 
 		await publishMessage(body, options);
 
-		expect(received.applicationProperties).to.eql({ contentEncoding: 'zlib', attemptCount: 0, bar: 'baz', });
+		expect(received.applicationProperties).to.eql({ contentEncoding: 'zlib', attemptCount: 0, bar: 'baz' });
 		expect(received.correlationId).to.equal(options.correlationId);
 		expect(received.body.toString()).to.equal(endcodedBody);
 	});
