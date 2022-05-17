@@ -61,6 +61,7 @@ describe('Topics - Systemic Azure Bus API', () => {
 	it('publish a message with explicit messageId and check structure on receiving', () => new Promise(async resolve => {
 		const payload = createPayload();
 		const messageId = '1234567890';
+		const correlationId = 'abc123';
 		const publish = busApi.publish('fire');
 
 		const handler = async msg => {
@@ -70,11 +71,12 @@ describe('Topics - Systemic Azure Bus API', () => {
 			expect(applicationProperties).to.be.an('object');
 			expect(body).to.be.eql(payload);
 			expect(properties.messageId).to.be.eql(messageId);
+			expect(properties.correlationId).to.be.equal(correlationId);
 			resolve();
 		};
 
 		busApi.safeSubscribe('assess', handler);
-		await publish(payload, { messageId });
+		await publish(payload, { messageId, correlationId });
 	}));
 
 	it('publish a message with explicit messageId and check scheduler on receiving', () => new Promise(async resolve => {
