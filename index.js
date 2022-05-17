@@ -21,7 +21,7 @@ module.exports = () => {
 	let topicClientFactory;
 	let queueClientFactory;
 	let enqueuedItems = 0;
-	const sendersByPublication = {};
+	let sendersByPublication = {};
 
 	const start = async ({
 		config: {
@@ -216,12 +216,18 @@ module.exports = () => {
 		await queueClientFactory.stop();
 		debug('Stopping service bus connection...');
 		await sbClient.close();
-		const checkifSubscriptionIsEmpty = () => new Promise(resolve => setInterval(() => {
-			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
-			enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
-		}, 100));
+		const checkifSubscriptionIsEmpty = async () => {
+			let intervalId;
+			await new Promise(resolve => {
+				intervalId = setInterval(() => {
+					debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
+					enqueuedItems === 0 && resolve(); // eslint-disable-line no-unused-expressions
+				}, 100);
+			});
+			clearInterval(intervalId);
+		};
 		await checkifSubscriptionIsEmpty();
-		sendersByPublication.length = 0;
+		sendersByPublication = {};
 	};
 
 	return { start, stop };
