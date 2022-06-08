@@ -214,12 +214,12 @@ module.exports = () => {
 	};
 
 	const drainOpenSubscriptions = async () => {
-		let i = openSubscriptions.length;
-		while (i--) {
-			debug('Closing active subscription');
-			await openSubscriptions[i].close();
-			openSubscriptions.splice(i, 1);
-		}
+		debug(`Closing ${openSubscriptions.length} active subscriptions`);
+		const closeSubscription = async (subscription, index) => {
+			debug('Closing active subscription', index);
+			await subscription.close();
+		};
+		await Promise.all(openSubscriptions.map(closeSubscription));
 	};
 
 	const stop = async () => {
