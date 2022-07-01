@@ -51,6 +51,7 @@
         "requireForBlockBody": false
       }
     ],
-    "object-curly-newline": "off"
+    "object-curly-newline": "off",
+    "no-async-promise-executor": "off"
   }
 }

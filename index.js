@@ -94,7 +94,6 @@ module.exports = () => {
 				}
 			};
 
-
 			debug(`Starting subscription ${subscriptionId} on topic ${topic}...`);
 			const openSubscription = receiver.subscribe({
 				processMessage: onMessageHandler,
@@ -228,11 +227,13 @@ module.exports = () => {
 
 		let timer;
 		// eslint-disable-next-line no-return-assign
-		const checkIfSubscriptionIsEmpty = () => new Promise(resolve => timer = setInterval(async () => {
-			debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
-			// eslint-disable-next-line no-unused-expressions
-			enqueuedItems === 0 && resolve();
-		}, 100));
+		const checkIfSubscriptionIsEmpty = () => new Promise(resolve => {
+			timer = setInterval(async () => {
+				debug(`Trying to stop component | ${enqueuedItems} enqueued items remaining`);
+				// eslint-disable-next-line no-unused-expressions
+				enqueuedItems === 0 && resolve();
+			}, 100);
+		});
 		await checkIfSubscriptionIsEmpty();
 		clearInterval(timer);
 

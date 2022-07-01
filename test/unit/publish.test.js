@@ -5,7 +5,6 @@ const publish = require('../../lib/operations/topics/publish');
 
 const createPayload = () => ({ foo: Date.now() });
 
-
 const createSender = (maxAttempts = 2) => {
 	let attempts = 0;
 
@@ -21,7 +20,6 @@ const createSender = (maxAttempts = 2) => {
 		sendMessages,
 	};
 };
-
 
 describe('Publish  message on Topic', () => {
 	it('Should publish', () => new Promise(async resolve => {
