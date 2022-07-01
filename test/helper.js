@@ -13,7 +13,9 @@ const attack = async (amount, publishFire) => {
 	--amount; // eslint-disable-line no-param-reassign
 	amount && attack(amount, publishFire); // eslint-disable-line no-unused-expressions
 };
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = ms => new Promise(resolve => {
+	setTimeout(resolve, ms);
+});
 
 let bus;
 

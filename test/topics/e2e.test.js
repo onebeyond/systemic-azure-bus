@@ -100,7 +100,8 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await publish(payload, { messageId, scheduledEnqueueTimeUtc });
 	}));
 
-	it('publish a message with explicit messageId and check structure on receiving if the "subscriptionName" is the one',
+	it(
+		'publish a message with explicit messageId and check structure on receiving if the "subscriptionName" is the one',
 		() => new Promise(async resolve => {
 			const payload = createPayload();
 			const messageId = '8734258619';
@@ -145,7 +146,8 @@ describe('Topics - Systemic Azure Bus API', () => {
 			expect(messagesInDlq.length).to.be(0);
 
 			resolve();
-		}));
+		}),
+	);
 
 	it('publishes lots of messages with no explicit messageId and receives them all', () => new Promise(async resolve => {
 		const BULLETS = 10;
@@ -179,7 +181,6 @@ describe('Topics - Systemic Azure Bus API', () => {
 		busApi.safeSubscribe('assess', handler);
 		await busApi.publish('fire')(payload, { contentEncoding: 'zlib' }); // eslint-disable-line no-await-in-loop
 	}));
-
 
 	/**
 	 * This test is skipped because the service bus is not filtering duplicated messages on subscriptions
