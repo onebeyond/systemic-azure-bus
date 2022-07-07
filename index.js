@@ -46,6 +46,64 @@ module.exports = () => {
 			return topicApi.publish(sender);
 		};
 
+		const getMessageProperties = brokeredMessage => {
+			const {
+				// ServiceBusReceivedMessage
+				deadLetterReason,
+				deadLetterErrorDescription,
+				lockToken,
+				deliveryCount,
+				enqueuedTimeUtc,
+				expiresAtUtc,
+				lockedUntilUtc,
+				enqueuedSequenceNumber,
+				sequenceNumber,
+				deadLetterSource,
+				state,
+
+				// ServiceBusMessage
+				messageId,
+				contentType,
+				correlationId,
+				partitionKey,
+				sessionId,
+				replyToSessionId,
+				timeToLive,
+				subject,
+				to,
+				replyTo,
+				scheduledEnqueueTimeUtc,
+			} = brokeredMessage;
+
+			return {
+				// ServiceBusReceivedMessage
+				deadLetterReason,
+				deadLetterErrorDescription,
+				lockToken,
+				deliveryCount,
+				enqueuedTimeUtc,
+				expiresAtUtc,
+				lockedUntilUtc,
+				enqueuedSequenceNumber,
+				sequenceNumber,
+				deadLetterSource,
+				state,
+
+				// ServiceBusMessage
+				messageId,
+				contentType,
+				correlationId,
+				partitionKey,
+				sessionId,
+				replyToSessionId,
+				timeToLive,
+				subject,
+				to,
+				replyTo,
+				scheduledEnqueueTimeUtc,
+			};
+		};
+
 		const subscribe = onError => (subscriptionId, handler) => {
 			const { topic, subscription, errorHandling } = subscriptions[subscriptionId] || {};
 			if (!topic || !subscription) throw new Error(`Data for subscription ${subscriptionId} non found!`);
@@ -61,7 +119,7 @@ module.exports = () => {
 					enqueuedItems++;
 					debug(`Enqueued items increase | ${enqueuedItems} items`);
 					debug(`Handling message on topic ${topic}`);
-					const { body, applicationProperties, ...properties } = brokeredMessage;
+					const { body, applicationProperties } = brokeredMessage;
 					const { subscriptionName: messageSubscription } = applicationProperties;
 
 					if (!messageSubscription || subscription === messageSubscription) {
@@ -78,7 +136,7 @@ module.exports = () => {
 								applicationProperties.contentEncoding,
 							),
 							applicationProperties,
-							properties,
+							properties: getMessageProperties(brokeredMessage),
 						});
 					}
 					await receiver.completeMessage(brokeredMessage);
