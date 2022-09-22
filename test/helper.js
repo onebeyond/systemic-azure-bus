@@ -61,6 +61,7 @@ const start = async ({ config }) => {
 	return {
 		safeSubscribe: bus.subscribe(console.error), // eslint-disable-line no-console
 		publish: bus.publish,
+		cancelScheduledMessages: bus.cancelScheduledMessages,
 		peekDlq: bus.peekDlq,
 		peek: bus.peek,
 		purgeDlqBySubcriptionId,

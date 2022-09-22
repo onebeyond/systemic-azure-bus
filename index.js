@@ -46,6 +46,11 @@ module.exports = () => {
 			return topicApi.publish(sender);
 		};
 
+		const cancelScheduledMessages = async (publicationId, sequenceNumber) => {
+			debug(`Cancelling messages ${sequenceNumber} for topic ${publicationId}`);
+			return sendersByPublication[publicationId].cancelScheduledMessages(sequenceNumber);
+		};
+
 		const getMessageProperties = brokeredMessage => {
 			const {
 				// ServiceBusReceivedMessage
@@ -261,6 +266,7 @@ module.exports = () => {
 		return {
 			health,
 			publish,
+			cancelScheduledMessages,
 			subscribe,
 			peekDlq,
 			peek,
