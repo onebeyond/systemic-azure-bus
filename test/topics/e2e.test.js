@@ -79,6 +79,37 @@ describe('Topics - Systemic Azure Bus API', () => {
 		await publish(payload, { messageId, correlationId });
 	}));
 
+	it('cancel message should also work for non instanced topic sender', () => new Promise(async (resolve, reject) => {
+		const payload = createPayload();
+		const publish = busApi.publish('fire');
+
+		const now = Date.now();
+		const toCancelMessageId = `${now}-to-cancel-123`;
+		const toCancelCorrelationId = `${now}-to-cancel-456`;
+
+		busApi.safeSubscribe('assess', async msg => {
+			if (msg.properties.messageId === toCancelMessageId) {
+				reject(new Error(`Message not cancelled! -> ${msg.properties.correlationId}`));
+			}
+		});
+
+		const toCancelScheduledEnqueueTimeUtc = new Date(Date.now() + 20000);
+		const toCancelSequenceNumber = await publish(payload, {
+			messageId: toCancelMessageId,
+			correlationId: toCancelCorrelationId,
+			scheduledEnqueueTimeUtc: toCancelScheduledEnqueueTimeUtc,
+		});
+
+		// That would ensure us topic senders needs to be instanced again
+		await bus.stop();
+		busApi = await bus.start({ config });
+
+		await busApi.cancelScheduledMessages('fire', toCancelSequenceNumber);
+		await sleep(25000);
+
+		resolve();
+	}));
+
 	it('publish a message with explicit correlationId and cancel it before receiving', () => new Promise(async (resolve, reject) => {
 		const payload = createPayload();
 		const publish = busApi.publish('fire');
