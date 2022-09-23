@@ -35,15 +35,30 @@ module.exports = () => {
 		topicClientFactory = factories.topics(sbClient);
 		queueClientFactory = factories.queue(sbClient);
 
-		const publish = publicationId => {
+		const upsertSender = publicationId => {
 			const { topic } = publications[publicationId] || {};
-			if (!topic) throw new Error(`Topic for publication ${publicationId} non found!`);
+			if (!topic) {
+				throw new Error(`Topic for publication ${publicationId} non found!`);
+			}
+
 			let sender = sendersByPublication[publicationId];
 			if (!sender) {
 				sender = topicClientFactory.createSender(topic);
 				sendersByPublication[publicationId] = sender;
 			}
+
+			return sender;
+		};
+
+		const publish = publicationId => {
+			const sender = upsertSender(publicationId);
 			return topicApi.publish(sender);
+		};
+
+		const cancelScheduledMessages = async (publicationId, sequenceNumber) => {
+			debug(`Cancelling messages ${sequenceNumber} for topic ${publicationId}`);
+			const sender = upsertSender(publicationId);
+			return sender.cancelScheduledMessages(sequenceNumber);
 		};
 
 		const getMessageProperties = brokeredMessage => {
@@ -261,6 +276,7 @@ module.exports = () => {
 		return {
 			health,
 			publish,
+			cancelScheduledMessages,
 			subscribe,
 			peekDlq,
 			peek,
