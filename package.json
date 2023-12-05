@@ -1,6 +1,6 @@
 {
   "name": "systemic-azure-bus",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "description": "A systemic component for azure bus",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "prepush": "npm run test"
   },
   "engines": {
-    "node": ">=14 <=18"
+    "node": ">=14 <=20"
   },
   "keywords": [
     "systemic",
