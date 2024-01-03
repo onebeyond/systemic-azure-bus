@@ -1,5 +1,7 @@
 [![CI](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/ci.yml/badge.svg)](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/ci.yml)
 [![CD](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/cd.yml/badge.svg)](https://github.com/guidesmiths/systemic-azure-bus/actions/workflows/cd.yml)
+[![Maintainability](https://api.codeclimate.com/v1/badges/14bd278dc0beaf8874b7/maintainability)](https://codeclimate.com/github/onebeyond/systemic-azure-bus/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/14bd278dc0beaf8874b7/test_coverage)](https://codeclimate.com/github/onebeyond/systemic-azure-bus/test_coverage)
 
 # systemic-azure-bus
 
